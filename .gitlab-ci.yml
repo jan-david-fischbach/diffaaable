@@ -1,0 +1,30 @@
+before_script:
+  - export PATH="/scratch/local/jdf/conda/envs/runner/bin:$PATH"
+  - pip list
+  - python -V # Print out python version for debugging
+  - which python # Print out which python for debugging
+  - pip install pre-commit tox
+  - pip install -U .[dev,docs]
+
+stages:
+  - test
+  - release
+
+pre-commit:
+  stage: test
+  script:
+    - pre-commit run -a
+
+test:
+  stage: test
+  script:
+    - pytest
+  allow_failure: true
+
+doctest:
+  stage: test
+  script:
+    - jb build docs
+  artifacts:
+    paths:
+      - docs/_build/html/

@@ -1,0 +1,72 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "77c7147e528b9a7c20f3546a6de3ac0cf6f15859"
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-yaml
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: name-tests-test
+        args: ["--pytest-test-first"]
+      - id: trailing-whitespace
+
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: "v0.2.1"
+  #   hooks:
+  #     - id: ruff
+  #     - id: ruff-format
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: 80bd2a94e5c8708d147a39a542db0d746a3ed327
+    hooks:
+      - id: shellcheck
+
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: "v1.8.0"
+  #   hooks:
+  #     - id: mypy
+  #       exclude: ^(docs/|example-plugin/|tests/fixtures)
+  #       additional_dependencies:
+  #         - "pydantic"
+
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: 97a46d97aea9f027a3a8714244f5c93a74d742de
+    hooks:
+      - id: pretty-format-toml
+        args: [--autofix]
+
+  - repo: https://github.com/aristanetworks/j2lint.git
+    rev: e88cee4c8deb864105763c446c3ab3048c392efe
+    hooks:
+      - id: j2lint
+        types: [file]
+        files: \.(j2|yml|yaml)$
+        args: [--extensions, "j2,yml,yaml", --ignore, jinja-statements-delimiter, jinja-statements-indentation, --]
+        exclude: .github/.*
+  # - repo: https://github.com/codespell-project/codespell
+  #   rev: 0eb441d628db788e487a72316fc1b8833fc473c3
+  #   hooks:
+  #     - id: codespell
+  #       additional_dependencies:
+  #         - tomli
+
+  # - repo: https://github.com/kynan/nbstripout
+  #   rev: e4c5b4dcbab4afa0b88b7a9243db42b1a8d95dde
+  #   hooks:
+  #     - id: nbstripout
+  #       files: ".ipynb"
+  # - repo: https://github.com/pre-commit/pygrep-hooks
+  #   rev: 7b4409161486c6956bb3206ce96db5d56731b1b9 # Use the ref you want to point at
+  #   hooks:
+  #     - id: python-use-type-annotations
+  # - repo: https://github.com/PyCQA/bandit
+  #   rev: fe1361fdcc274850d4099885a802f2c9f28aca08
+  #   hooks:
+  #     - id: bandit
+  #       args: [--exit-zero]
+  #       # ignore all tests, not just tests data
+  #       exclude: ^tests/
