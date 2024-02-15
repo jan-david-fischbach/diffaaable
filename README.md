@@ -1,4 +1,4 @@
-# diffaaable 0.0.1
+# diffaaable 0.1.0
 
 JAX-differentiable AAA algorithm
 
