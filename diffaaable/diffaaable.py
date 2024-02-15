@@ -29,13 +29,14 @@ def aaa_jvp(primals, tangents):
   z_k = z_k_full[~chosen]
   f_k = f_k[~chosen]
 
-  #z_dot should be zero anyways
+  # z_dot should be zero anyways
   if np.any(z_dot):
     raise NotImplementedError("Parametrizing the sampling positions z_k is not supported")
   z_k_dot = z_dot[~chosen]
   f_k_dot = f_dot[~chosen]
 
-  sort_orig = jnp.argsort(jnp.abs(z_k_full[chosen])) #this is not very elegant :/
+  # this is not very elegant :/ have to track which f_dot corresponds to z_k
+  sort_orig = jnp.argsort(jnp.abs(z_k_full[chosen]))
   sort_out = jnp.argsort(jnp.argsort(jnp.abs(z_j)))
 
   z_j_dot = z_dot[chosen][sort_orig][sort_out]
@@ -51,7 +52,9 @@ def aaa_jvp(primals, tangents):
   A = jnp.concatenate([A, 2*w_j.reshape(1, -1)])
   b = jnp.append(b, 0)
 
-  w_j_dot, _, _, _ = jnp.linalg.lstsq(A, b)
+  with jax.disable_jit():
+    w_j_dot, _, _, _ = jnp.linalg.lstsq(A, b)
+
 
   z_n_dot = (
     jnp.sum(w_j_dot.reshape(-1, 1)/(z_n.reshape(1, -1)-z_j.reshape(-1, 1)),    axis=0)/

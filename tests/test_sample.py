@@ -4,10 +4,14 @@ import jax.numpy as np
 import jax
 import numpy as onp
 
+from jax import random
+
 n_sample = 200
-z_k = onp.random.rand(n_sample)*2+1 + onp.random.rand(n_sample)*1j-0.5
 
 def pole1(a):
+    key = random.PRNGKey(0)
+    key, subkey = random.split(key)
+    z_k = random.uniform(key, (n_sample,))*2+0.5 + random.uniform(subkey, (n_sample,))*1j
     f_k = f(z_k, a)
     z_j, f_j, w_j, z_n = aaa(z_k, f_k)
     p_i = z_n.imag
@@ -29,3 +33,42 @@ def test_grad():
 def test_jacfwd():
     g = jax.jacfwd(pole1)
     assert np.allclose(g(np.pi/2), -0.63661977)
+
+def test_jacrev():
+    g = jax.jacrev(pole1)
+    assert np.allclose(g(np.pi/2), -0.63661977)
+
+def test_grad_simple():
+    @jax.custom_jvp
+    def foo(a):
+        return onp.sum(a) * 2
+
+    @foo.defjvp
+    def foo_jvp(primals, tangents):
+        primal_out = foo(*primals)
+
+        a = primals[0]
+        a_dot = tangents[0]
+
+        with jax.disable_jit():
+            a_dot_out, _, _, _ = np.linalg.lstsq(np.diag(a),a_dot)
+        return primal_out, a_dot_out[0]*2
+
+    def bar(a):
+        return foo(a)
+
+    g = jax.jacrev(bar)
+    g(np.array([1.0, 1.0]))
+
+def test_lstsq():
+    def lstsq(A, b):
+        res = np.linalg.lstsq(A,b)
+        return np.sum(res[0])
+
+    g = jax.jacrev(lstsq, argnums=1)
+    g(np.eye(2), np.ones(2))
+
+
+if __name__ == "__main__":
+    test_grad_simple()
+    #test_grad()
