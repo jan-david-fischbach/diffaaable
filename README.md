@@ -5,5 +5,5 @@ JAX-differentiable AAA algorithm
 ## Usage
 
 ## Installation
-to install `timid` please run
+to install `diffaaable` please run
 `pip install .`

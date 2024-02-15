@@ -75,8 +75,8 @@ strict = true
 # addopts = --tb=no
 addopts = '--tb=short'
 norecursedirs = ["extra/*.py"]
-python_files = ["timid/*.py", "notebooks/*.ipynb", "tests/*.py"]
-testpaths = ["timid/", "tests"]
+python_files = ["diffaaable/*.py", "notebooks/*.ipynb", "tests/*.py"]
+testpaths = ["diffaaable/", "tests"]
 
 [tool.ruff]
 fix = true
@@ -124,7 +124,7 @@ src = "README.md"
 src = "pyproject.toml"
 
 [[tool.tbump.file]]
-src = "timid/__init__.py"
+src = "diffaaable/__init__.py"
 
 [tool.tbump.git]
 message_template = "Bump to {new_version}"
