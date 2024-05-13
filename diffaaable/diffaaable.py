@@ -64,3 +64,15 @@ def aaa_jvp(primals, tangents):
   tangent_out = z_j_dot, f_j_dot, w_j_dot, z_n_dot
 
   return primal_out, tangent_out
+
+
+def residues(z_j,f_j,w_j,z_n):
+  '''residues via formula for simple poles
+  of quotients of analytic functions'''
+
+  C_pol = 1.0 / (z_n[:,None] - z_j[None,:])
+  N_pol = C_pol.dot(f_j*w_j)
+  Ddiff_pol = (-C_pol**2).dot(w_j)
+  res = N_pol / Ddiff_pol
+
+  return res

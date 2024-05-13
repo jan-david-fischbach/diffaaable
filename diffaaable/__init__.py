@@ -2,7 +2,7 @@
 
 __version__ = "0.1.0"
 
-__all__ = ["aaa", "BarycentricRational"]
+__all__ = ["aaa", "residues", "BarycentricRational"]
 
-from diffaaable.diffaaable import aaa
+from diffaaable.diffaaable import aaa, residues
 from baryrat import BarycentricRational
