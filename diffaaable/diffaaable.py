@@ -5,6 +5,7 @@ import jax
 import numpy as np
 from baryrat import aaa as oaaa # ordinary aaa
 import functools
+from functools import partial
 
 @functools.wraps(oaaa)
 @jax.custom_jvp
@@ -18,8 +19,8 @@ aaa.__doc__ = f"This is a wrapped version of `aaa` as provided by `baryrat`, pro
 
 @aaa.defjvp
 def aaa_jvp(primals, tangents):
-  z_k_full, f_k = primals
-  z_dot, f_dot = tangents
+  z_k_full, f_k = primals[:2]
+  z_dot, f_dot = tangents[:2]
 
   primal_out = aaa(z_k_full, f_k)
   z_j, f_j, w_j, z_n = primal_out
