@@ -1,10 +1,10 @@
-before_script:
-  - export PATH="/scratch/local/jdf/conda/envs/runner/bin:$PATH"
-  - pip list
-  - python -V # Print out python version for debugging
-  - which python # Print out which python for debugging
-  - pip install pre-commit tox
-  - pip install -U .[dev,docs]
+default:
+  image: python:3.11
+  before_script:
+    - python -V # Print out python version for debugging
+    - which python # Print out which python for debugging
+    - pip install pre-commit tox
+    - pip install -U .[dev,docs]
 
 stages:
   - test
