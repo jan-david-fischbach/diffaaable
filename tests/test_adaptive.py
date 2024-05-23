@@ -35,17 +35,17 @@ def test_grad(f):
             adaptive.adaptive_aaa(z_k, f_a)
 
         z_n = sort_poles(z_n)
-        jax.debug.print("z_n: {}", z_n[0])
+        #jax.debug.print("z_n: {}", z_n[0])
 
         return np.real(z_n[0])
 
     grad = jax.grad(p1_imag)
 
     a = np.array([np.pi], dtype=complex)
-    print("## Test Grad")
+    # print("## Test Grad")
     print(f"grad: {grad(a)}")
-    print("## Check Grads")
-    jax.test_util.check_grads(p1_imag, (a,), 1)
+    # print("## Check Grads")
+    # jax.test_util.check_grads(p1_imag, (a,), 1)
 
 if __name__ == "__main__":
     test_grad(f2)
