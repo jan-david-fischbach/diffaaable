@@ -44,6 +44,12 @@ def test_jvp():
     f_dot = np.ones_like(z_k)
     jax.jvp(aaa, (z_k, f_k), (np.zeros_like(z_k), f_dot))
 
+def test_jvp_complex_input():
+    z_k = np.linspace(0, 3, 20, dtype=complex)
+    f_k = f(z_k, np.pi)
+    f_dot = np.ones_like(z_k)
+    jax.jvp(aaa, (z_k, f_k), (np.zeros_like(z_k), f_dot))
+
 def test_grad_simple():
     @jax.custom_jvp
     def foo(a):
@@ -76,5 +82,5 @@ def test_lstsq():
 
 
 if __name__ == "__main__":
-    test_grad_simple()
+    test_jvp_complex_input()
     #test_grad()

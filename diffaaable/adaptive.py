@@ -13,18 +13,22 @@ def _adaptive_aaa(z_k:np.ndarray,
   f_k = f(z_k)
   n_eval = len(f_k)
   if cutoff is None:
-    cutoff = 1e10*np.max(np.abs(f_k))
+    cutoff = 1e10*np.max(np.median(np.abs(f_k)))
+
+  def mask(z_k, f_k):
+    m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
+    return z_k[m], f_k[m]
 
   for i in range(evolutions):
+    jax.debug.print("f_k: {}", f_k)
+    z_k, f_k = mask(z_k, f_k)
     #jax.debug.print("{}: {} -> {}", i, z_k, f_k)
     z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol)
     z_k = np.append(z_k, z_n)
     f_k = np.append(f_k, f(z_n))
     n_eval += len(z_n)
-    mask = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
-    f_k = f_k[mask]
-    z_k = z_k[mask]
 
+  z_k, f_k = mask(z_k, f_k)
   return z_j, f_j, w_j, z_n, z_k, f_k
 
 @jax.custom_jvp
