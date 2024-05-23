@@ -80,4 +80,4 @@ def residues(z_j,f_j,w_j,z_n):
   Ddiff_pol = (-C_pol**2).dot(w_j)
   res = N_pol / Ddiff_pol
 
-  return res
+  return jnp.nan_to_num(res)
