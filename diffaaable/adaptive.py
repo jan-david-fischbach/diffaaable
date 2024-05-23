@@ -16,6 +16,7 @@ def _adaptive_aaa(z_k:np.ndarray,
     cutoff = 1e10*np.max(np.abs(f_k))
 
   for i in range(evolutions):
+    #jax.debug.print("{}: {} -> {}", i, z_k, f_k)
     z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol)
     z_k = np.append(z_k, z_n)
     f_k = np.append(f_k, f(z_n))
@@ -31,6 +32,8 @@ def adaptive_aaa(z_k:np.ndarray,
                  f:callable):
   """
   z_k initial z_ks 
+  f jax.tree_util.Partial 
+    (Partial function, with only positional arguments set and one open argument (z))
   """
   z_j, f_j, w_j, z_n, z_k, f_k = \
     _adaptive_aaa(z_k, f)
@@ -42,34 +45,30 @@ def adaptive_aaa_jvp(primals, tangents):
   z_dot, f_dot = tangents[:2]
 
   if np.any(z_dot):
-    raise NotImplementedError("Parametrizing the sampling positions z_k is not supported")
-
-  z_j, f_j, w_j, z_n, z_k_last, f_k = \
-    _adaptive_aaa(z_k, f)
-
-
-  jax.debug.print("f_dot {}", f_dot)
-  tangents_in = f_dot(z_k_last)
-  jax.debug.print("poles {}", z_n)
-  jax.debug.print("samples {}", z_k_last)
-  jax.debug.print("tangents in {}", tangents_in)
-
-  primals_out, tangents_out = jax.jvp(aaa, (z_k, f_k), (np.zeros_like(z_k), tangents_in))
-
-  jax.debug.print("primals out {}", primals_out)
-  jax.debug.print("tangents out {}", tangents_out)
-  return primals_out, tangents_out
+    raise NotImplementedError(
+      "Parametrizing the sampling positions z_k is not supported"
+    )
   
-# def f_fwd(z_k:np.ndarray, 
-#           f:callable):
+  f_unpartial = f.func
+  args, _ = jax.tree.flatten(f)
+  args_dot, _ = jax.tree.flatten(f_dot)
 
-#   z_j, f_j, w_j, z_n, z_k, f_k = \
-#     _adaptive_aaa(z_k, f)
-#   return (z_j, f_j, w_j, z_n), (z_j, f_j, w_j, z_n, z_k, f_k)
+  z_j, f_j, w_j, z_n, z_k_last, f_k_last = \
+    _adaptive_aaa(z_k, f)
+  
+  z_k_last_dot = np.zeros_like(z_k_last)
 
-# def f_bwd(res, g):
-#   z_j, f_j, w_j, z_n, z_k, f_k = res
-#   print(g)
-#   return ()
+  # NOTE: the following will perform a redundant evaluation of the primal value 
+  # of 'f' to get the gradients TODO: get rid of the redundancy (or cache)
+  f_k_last , f_k_last_dot = jax.jvp( 
+    f_unpartial, (*args, z_k_last), (*args_dot, z_k_last_dot)
+  )
+  
+  # jax.debug.print("primals -> aaa {}", f_k_last)
+  # jax.debug.print("tangents -> aaa {}", f_k_last_dot)
 
-# adaptive_aaa.defvjp(f_fwd, f_bwd)
+  primals_out, tangents_out = jax.jvp(aaa, (z_k_last, f_k_last), (z_k_last_dot, f_k_last_dot))
+
+  # jax.debug.print("primals out {}", primals_out)
+  # jax.debug.print("tangents out {}", tangents_out)
+  return primals_out, tangents_out
