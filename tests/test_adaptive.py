@@ -28,17 +28,17 @@ def test_tan(f):
 def test_grad(f):
     def p1_imag(a):
         f_a = jax.tree_util.Partial(f, a)
-        z_k = np.linspace(0,0.5,10, dtype=complex) 
-        # Note: one of the samples lies directly on a pole. 
+        z_k = np.linspace(0,0.5,10, dtype=complex)
+        # Note: one of the samples lies directly on a pole.
         # Adaptive aaa should be robust against that due to masking.
         z_j, f_j, w_j, z_n = \
             adaptive.adaptive_aaa(z_k, f_a)
-        
+
         z_n = sort_poles(z_n)
         jax.debug.print("z_n: {}", z_n[0])
-        
+
         return np.real(z_n[0])
-    
+
     grad = jax.grad(p1_imag)
 
     a = np.array([np.pi], dtype=complex)

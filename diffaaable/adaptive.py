@@ -2,13 +2,13 @@ import jax.numpy as np
 from diffaaable import aaa
 import jax
 
-def _adaptive_aaa(z_k:np.ndarray, 
-                 f:callable, 
-                 evolutions: int = 3, 
+def _adaptive_aaa(z_k:np.ndarray,
+                 f:callable,
+                 evolutions: int = 3,
                  cutoff: float = None,
                  tol: float = 1e-13):
   """
-  z_k initial z_ks 
+  z_k initial z_ks
   """
   f_k = f(z_k)
   n_eval = len(f_k)
@@ -32,11 +32,11 @@ def _adaptive_aaa(z_k:np.ndarray,
   return z_j, f_j, w_j, z_n, z_k, f_k
 
 @jax.custom_jvp
-def adaptive_aaa(z_k:np.ndarray, 
+def adaptive_aaa(z_k:np.ndarray,
                  f:callable):
   """
-  z_k initial z_ks 
-  f jax.tree_util.Partial 
+  z_k initial z_ks
+  f jax.tree_util.Partial
     (Partial function, with only positional arguments set and one open argument (z))
   """
   z_j, f_j, w_j, z_n, z_k, f_k = \
@@ -52,22 +52,22 @@ def adaptive_aaa_jvp(primals, tangents):
     raise NotImplementedError(
       "Parametrizing the sampling positions z_k is not supported"
     )
-  
+
   f_unpartial = f.func
   args, _ = jax.tree.flatten(f)
   args_dot, _ = jax.tree.flatten(f_dot)
 
   z_j, f_j, w_j, z_n, z_k_last, f_k_last = \
     _adaptive_aaa(z_k, f)
-  
+
   z_k_last_dot = np.zeros_like(z_k_last)
 
-  # NOTE: the following will perform a redundant evaluation of the primal value 
+  # NOTE: the following will perform a redundant evaluation of the primal value
   # of 'f' to get the gradients TODO: get rid of the redundancy (or cache)
-  f_k_last , f_k_last_dot = jax.jvp( 
+  f_k_last , f_k_last_dot = jax.jvp(
     f_unpartial, (*args, z_k_last), (*args_dot, z_k_last_dot)
   )
-  
+
   # jax.debug.print("primals -> aaa {}", f_k_last)
   # jax.debug.print("tangents -> aaa {}", f_k_last_dot)
 

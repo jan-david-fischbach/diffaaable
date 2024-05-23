@@ -15,7 +15,7 @@ def aaa(z_k, f_k, *args, **kwargs):
   z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
 
   # baryrat decides to convert to float if all poles lie on the real axis
-  z_n = z_n.astype(complex) 
+  z_n = z_n.astype(complex)
 
   return (r.nodes, r.values, r.weights, z_n)
 
