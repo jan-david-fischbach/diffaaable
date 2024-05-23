@@ -26,7 +26,7 @@ def nested(x, f_a):
 @nested.defjvp
 def nested_jvp(primals, tangents):
   x, f_a = primals
-  f = f_a.func
+  f = f_a.func # unpartial the function
 
   a_flat, _ = jax.tree.flatten(f_a)
 
