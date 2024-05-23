@@ -5,6 +5,7 @@ import jax.numpy as np
 import jax
 import jax; jax.config.update('jax_platforms', 'cpu')
 import jax.tree_util
+import pytest
 
 def f1(a, x):
     return 1/(x-a*2)
@@ -16,12 +17,14 @@ def sort_poles(z_n):
     order = np.argsort(np.abs(z_n-0.5))
     return z_n[order]
 
+@pytest.mark.parametrize("f", [f1, f2])
 def test_tan(f):
     f_a = jax.tree_util.Partial(f, np.pi)
     z_j, f_j, w_j, z_n = adaptive.adaptive_aaa(np.linspace(0,1,10) + 0.01j, f_a)
     z_n = sort_poles(z_n)
     print(f"Poles: {z_n}")
 
+@pytest.mark.parametrize("f", [f1, f2])
 def test_grad(f):
     def p1_imag(a):
         f_a = jax.tree_util.Partial(f, a)
@@ -43,7 +46,4 @@ def test_grad(f):
     jax.test_util.check_grads(p1_imag, (a,), 1)
 
 if __name__ == "__main__":
-    test_tan(f1)
-    test_tan(f2)
-    test_grad(f1)
-    test_grad(f2)
+    pytest.main()
