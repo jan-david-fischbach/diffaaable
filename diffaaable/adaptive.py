@@ -1,11 +1,14 @@
 import jax.numpy as np
+import numpy.typing as npt
 from diffaaable import aaa
 import jax
 from jax import random
-from functools import partial
 
-def _adaptive_aaa(z_k_0:np.ndarray,
-                 f:callable,
+def top_right(a: npt.NDArray[complex], b: npt.NDArray[complex]):
+  return np.logical_and(a.imag>b.imag, a.real>b.real)
+
+def _adaptive_aaa(z_k_0: npt.NDArray,
+                 f: callable,
                  evolutions: int = 2,
                  cutoff: float = None,
                  tol: float = 1e-9,
@@ -13,11 +16,19 @@ def _adaptive_aaa(z_k_0:np.ndarray,
                  domain: tuple[complex, complex] = None, #TODO
                  f_dot: callable = None):
   """
-  z_k initial z_ks
+  Implementation of `adaptive_aaa`
+
+  Parameters
+  ----------
+  see `adaptive_aaa`
+
+  f_dot: callable
+    Tangent of `f`. If provided JVPs of `f` will be collected throughout the
+    iterations. For use in custom_jvp
   """
   collect_tangents = f_dot is not None
   z_k = z_k_0
-  max_dist = np.max(np.abs(z_k_0[:, np.newaxis] - z_k_0[np.newaxis, :]))*0.4
+  max_dist = np.max(np.abs(z_k_0[:, np.newaxis] - z_k_0[np.newaxis, :]))
 
   if collect_tangents:
     f_unpartial = f.func
@@ -30,10 +41,16 @@ def _adaptive_aaa(z_k_0:np.ndarray,
   else:
     f_k = f(z_k)
     f_k_dot = np.zeros_like(f_k)
-
   n_eval = len(f_k)
+
+
   if cutoff is None:
-    cutoff = 1e10*np.max(np.median(np.abs(f_k)))
+    cutoff = 1e10*np.median(np.abs(f_k))
+
+  if domain is None:
+    center = np.mean(z_k)
+    disp = max_dist*(1+1j)
+    domain = (center-disp, center+disp)
 
   if radius is None:
     radius = 1e-3 * max_dist
@@ -42,6 +59,11 @@ def _adaptive_aaa(z_k_0:np.ndarray,
     m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
     return z_k[m], f_k[m], f_k_dot[m]
 
+  def domain_mask(z_n):
+    larger_min = top_right(z_n, domain[0])
+    smaller_max = top_right(domain[1], z_n)
+    return np.logical_and(larger_min, smaller_max)
+
   key = random.key(0)
   for i in range(evolutions):
     z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot)
@@ -49,10 +71,7 @@ def _adaptive_aaa(z_k_0:np.ndarray,
 
     key, subkey = jax.random.split(key)
 
-    distance = np.min(np.abs(z_n[:, np.newaxis] - z_k_0[np.newaxis, :]), axis=-1)
-    dist_mask = distance < max_dist
-
-    add_z_k = z_n[dist_mask]
+    add_z_k = z_n[domain_mask(z_n)]
     add_z_k += radius*np.exp(1j*2*np.pi*jax.random.uniform(subkey, add_z_k.shape))
 
     add_z_k_dot = np.zeros_like(add_z_k)
@@ -91,10 +110,51 @@ def adaptive_aaa(z_k_0:np.ndarray,
                  radius: float = None,
                  domain: tuple[complex, complex] = None
                  ):
-  """
-  z_k initial z_ks
-  f jax.tree_util.Partial
-    (Partial function, with only positional arguments set and one open argument (z))
+  """ An 2x adaptive  Antoulas–Anderson algorithm for rational approximation of
+  meromorphic functions that are costly to evaluate.
+
+  The algorithm iteratively places additional sample points close to estimated
+  positions of poles identified during the past iteration. By this refinement
+  scheme the number of function evaluations can be reduced.
+
+  It is JAX differentiable wrt. the approximated function `f`, via its other
+  arguments besides `z`. `f` should be provided as a `jax.tree_util.Partial`
+  with only positional arguments pre-filled!
+
+  Parameters
+  ----------
+  z_k_0 : np.ndarray
+      Array of initial sample points
+  f : callable
+      function to be approximated. When using gradients `f` should be provided
+      as a `jax.tree_util.Partial` with only positional arguments pre-filled.
+      Furthermore it should be compatible to `jax.jvp`.
+  evolutions: int
+      Number of refinement iterations
+  cutoff: float
+      Maximum absolute value a function evaluation should take
+      to be regarded valid. Otherwise the sample point is discarded.
+      Defaults to 1e10 times the median of `f(z_k_0)`
+  tol: float
+      Tolerance used in AAA (see `diffaaable.aaa`)
+  radius: float
+      Distance from the assumed poles for nex samples
+  domain: tuple[complex, complex]
+      Tuple of min (lower left) and max (upper right) values defining a
+      rectangle in the complex plane. Assumed poles outside of the domain
+      will not receive refinement.
+
+
+  Returns
+  -------
+  z_j: np.array
+      chosen samples
+  f_j: np.array
+      `f(z_j)`
+  w_j: np.array
+      Weights of Barycentric Approximation
+  z_n: np.array
+      Poles of Barycentric Approximation
   """
   return _adaptive_aaa(z_k_0, f, evolutions, cutoff, tol, radius, domain)
 
