@@ -2,13 +2,15 @@ import jax.numpy as np
 from diffaaable import aaa
 import jax
 from jax import random
+from functools import partial
 
 def _adaptive_aaa(z_k_0:np.ndarray,
                  f:callable,
-                 evolutions: int = 3,
+                 evolutions: int = 2,
                  cutoff: float = None,
                  tol: float = 1e-9,
-                 radius: float = 1e-3,
+                 radius: float = None,
+                 domain: tuple[complex, complex] = None, #TODO
                  f_dot: callable = None):
   """
   z_k initial z_ks
@@ -32,6 +34,9 @@ def _adaptive_aaa(z_k_0:np.ndarray,
   n_eval = len(f_k)
   if cutoff is None:
     cutoff = 1e10*np.max(np.median(np.abs(f_k)))
+
+  if radius is None:
+    radius = 1e-3 * max_dist
 
   def mask(z_k, f_k, f_k_dot):
     m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
@@ -70,22 +75,28 @@ def _adaptive_aaa(z_k_0:np.ndarray,
   if collect_tangents:
     return z_k, f_k, f_k_dot
 
-  import matplotlib.pyplot as plt
-  plt.scatter(z_k.real, z_k.imag)
-  plt.show()
-  plt.close()
+  # import matplotlib.pyplot as plt
+  # plt.scatter(z_k.real, z_k.imag)
+  # plt.show()
+  # plt.close()
 
   return z_j, f_j, w_j, z_n
 
 @jax.custom_jvp
 def adaptive_aaa(z_k_0:np.ndarray,
-                 f:callable):
+                 f:callable,
+                 evolutions: int = 2,
+                 cutoff: float = None,
+                 tol: float = 1e-9,
+                 radius: float = None,
+                 domain: tuple[complex, complex] = None
+                 ):
   """
   z_k initial z_ks
   f jax.tree_util.Partial
     (Partial function, with only positional arguments set and one open argument (z))
   """
-  return _adaptive_aaa(z_k_0, f)
+  return _adaptive_aaa(z_k_0, f, evolutions, cutoff, tol, radius, domain)
 
 @adaptive_aaa.defjvp
 def adaptive_aaa_jvp(primals, tangents):
@@ -98,7 +109,7 @@ def adaptive_aaa_jvp(primals, tangents):
     )
 
   z_k, f_k, f_k_dot = \
-    _adaptive_aaa(z_k_0, f, f_dot=f_dot)
+    _adaptive_aaa(z_k_0, f, *primals[2:], f_dot=f_dot)
 
   z_k_dot = np.zeros_like(z_k)
 

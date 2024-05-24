@@ -24,6 +24,18 @@ def test_tan(f):
     z_n = sort_poles(z_n)
     print(f"Poles: {z_n}")
 
+def test_kwargs():
+    f_a = jax.tree_util.Partial(f1, np.pi)
+    z_j, f_j, w_j, z_n = adaptive.adaptive_aaa(
+        np.linspace(0,1,10, dtype=complex),
+        f_a,
+        evolutions = 2,
+        cutoff = 1e12,
+        tol = 1e-9,
+        radius = 1e-3)
+    z_n = sort_poles(z_n)
+    print(f"Poles: {z_n}")
+
 @pytest.mark.parametrize("f", [f1, f2])
 def test_grad(f):
     def p1_imag(a):

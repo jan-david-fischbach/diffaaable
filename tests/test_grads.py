@@ -38,6 +38,11 @@ def test_jacrev():
     g = jax.jacrev(pole1)
     assert np.allclose(g(np.pi/2), -0.63661977)
 
+def test_kwargs():
+    z_k = np.linspace(0, 3, 20)
+    f_k = f(z_k, np.pi)
+    aaa(z_k, f_k, tol=1e-9, mmax=50)
+
 def test_jvp():
     z_k = np.linspace(0, 3, 20)
     f_k = f(z_k, np.pi)

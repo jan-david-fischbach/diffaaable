@@ -9,8 +9,8 @@ from functools import partial
 
 @functools.wraps(oaaa)
 @jax.custom_jvp
-def aaa(z_k, f_k, *args, **kwargs):
-  r = oaaa(z_k, f_k, *args, **kwargs)
+def aaa(z_k, f_k, tol=1e-13, mmax=100):
+  r = oaaa(z_k, f_k, tol=tol, mmax=mmax)
   z_n = r.poles()
   z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
 
