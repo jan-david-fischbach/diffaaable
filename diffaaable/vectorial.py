@@ -39,7 +39,6 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100):
   J = np.ones(M, dtype=bool)
   z_j = np.empty(0, dtype=z_k.dtype)
   f_j = np.empty((0, V), dtype=f_k.dtype)
-  C = []
   errors = []
 
   reltol = tol * np.linalg.norm(f_k, np.inf)
@@ -53,7 +52,6 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100):
       f_j = np.concatenate([f_j, f_k[jj][None, :]])
       J = J.at[jj].set(False)
 
-      # TODO fiddle in vector dim
       # Cauchy matrix containing the basis functions as columns
       C = 1.0 / (z_k[J,None] - z_j[None,:])
       # Loewner matrix
