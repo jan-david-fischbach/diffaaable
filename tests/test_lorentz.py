@@ -3,16 +3,18 @@ import jax.numpy as np
 from diffaaable.lorentz import lorentz_aaa
 
 
-def f_test(z, res, pole):
-  z = z[:, None]
-  return 1j*res/(z-pole) + 1j*res.conj()/(z+np.conj(pole))
+def f_test(z, res, poles):
+  f = np.zeros_like(z)
+  for r, p in zip(res, poles):
+    f += 1j*r/(z-p) + 1j*np.conj(r)/(z+np.conj(p))
+  return f
 
-z_k = np.linspace(1, 5, 100) + 0.01j
+z_k = np.linspace(-3, 5, 100) + 0.05j
 
 def test_lorentz_aaa():
-  pole = 2+0.1j
-  residues = np.array([1j])
-  z_j, f_j, w_j, errors = lorentz_aaa(z_k, f_test(z_k, residues, pole), mmax=10)
+  poles = np.array([2+0.1j, 2.7+0.3j])
+  residues = np.array([1j, 2])
+  z_j, f_j, w_j, errors = lorentz_aaa(z_k, f_test(z_k, residues, poles), mmax=10)
 
   print(f"{errors=}")
 
@@ -24,12 +26,14 @@ def test_lorentz_aaa():
   r = BarycentricRational(z_j, f_j, w_j)
 
   pol, res = r.polres()
-  mask = np.abs(res) > 1e-13
-  pol = pol[mask]
-  res = res[mask]
 
-  assert np.allclose(pol, np.array([-np.conj(pole), pole]))
-  assert np.allclose(res, 1j*np.array([np.conj(residues[0]), residues[0]]))
+  for pole, residue in zip(poles, residues):
+    assert np.any(np.isclose(pol, pole))
+    assert np.any(np.isclose(pol, -np.conj(pole)))
+
+    assert np.any(np.isclose(res, 1j*residue))
+    assert np.any(np.isclose(res, 1j*np.conj(residue)))
+
   print(f"poles: {pol}, residues: {res}")
 
 if __name__ == "__main__":

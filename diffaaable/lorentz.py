@@ -15,14 +15,14 @@ def optimal_weights(A, A_hat, stepsize=0.5):
      err = (A @ w) + (A_hat @ w.conj())
      return np.linalg.norm(err)
 
-  solver = jaxopt.LBFGS(fun=obj_fun, maxiter=100, tol=1e-7)
+  solver = jaxopt.LBFGS(fun=obj_fun, maxiter=300, tol=1e-13)
   res = solver.run(w_j)
   w_j, state = res
   w_j /= np.linalg.norm(w_j)
 
   return w_j
 
-def lorentz_aaa(z_k, f_k, tol=1e-13, mmax=100):
+def lorentz_aaa(z_k, f_k, tol=1e-9, mmax=100):
   """
   """
   z_k, f_k, M, V = check_inputs(z_k, f_k)
