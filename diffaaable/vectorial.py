@@ -3,14 +3,23 @@ config.update("jax_enable_x64", True) #important -> else aaa fails
 import jax.numpy as np
 import jax
 
-def _q(z, f, w, x):
-  """Function which can compute the 'upper' or 'lower' rational function
-  in a barycentric rational function.
+def check_inputs(z_k, f_k):
+  f_k = np.array(f_k)
+  z_k = np.array(z_k)
 
-  `x` may be a number or a column vector.
-  """
-  return np.sum((f * w) / (x - z), axis=-1)
+  if z_k.ndim != 1:
+    raise ValueError("z_k should be 1D but has shape {z_k.shape}")
+  M = z_k.shape[0]
 
+  if f_k.ndim == 1:
+    f_k = f_k[:, np.newaxis]
+
+  if f_k.ndim != 2 or f_k.shape[0]!=M:
+    raise ValueError("f_k should be 1 or 2D and have the same first"
+                     f"dimension as z_k, {f_k.shape=}, {z_k.shape=}")
+  V = f_k.shape[1]
+
+  return z_k, f_k, M, V
 
 def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100):
   """Compute a rational approximation of `F` over the points `Z` using the
@@ -25,18 +34,7 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100):
   Returns:
 
   """
-  if z_k.ndim != 1:
-    raise ValueError("z_k should be 1D but has shape {z_k.shape}")
-  M = z_k.shape[0]
-
-  if f_k.ndim == 1:
-    f_k = f_k[:, np.newaxis]
-
-  if f_k.ndim != 2 or f_k.shape[0]!=M:
-    raise ValueError("f_k should be 1 or 2D and have the same first"
-                     f"dimension as z_k, {f_k.shape=}, {z_k.shape=}")
-  V = f_k.shape[1]
-
+  z_k, f_k, M, V = check_inputs(z_k, f_k)
 
   J = np.ones(M, dtype=bool)
   z_j = np.empty(0, dtype=z_k.dtype)
