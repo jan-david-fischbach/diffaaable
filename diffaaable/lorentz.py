@@ -22,7 +22,7 @@ def optimal_weights(A, A_hat, stepsize=0.5):
 
   return w_j
 
-def lorentz_aaa(z_k, f_k, tol=1e-9, mmax=100):
+def lorentz_aaa(z_k, f_k, tol=1e-9, mmax=100, return_errors=False):
   """
   """
   z_k, f_k, M, V = check_inputs(z_k, f_k)
@@ -75,4 +75,14 @@ def lorentz_aaa(z_k, f_k, tol=1e-9, mmax=100):
       if errors[-1] <= reltol:
           break
 
-  return z_j, f_j, w_j, errors
+  if V == 1:
+    f_j = f_j[:, 0]
+
+
+  z_j = np.concatenate([z_j, -np.conj(z_j)])
+  f_j = np.concatenate([f_j, np.conj(f_j)])
+  w_j = np.concatenate([w_j, np.conj(w_j)])
+
+  if return_errors:
+    return z_j, f_j, w_j, errors
+  return z_j, f_j, w_j

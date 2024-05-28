@@ -14,14 +14,10 @@ z_k = np.linspace(-3, 5, 100) + 0.05j
 def test_lorentz_aaa():
   poles = np.array([2+0.1j, 2.7+0.3j])
   residues = np.array([1j, 2])
-  z_j, f_j, w_j, errors = lorentz_aaa(z_k, f_test(z_k, residues, poles), mmax=10)
+  z_j, f_j, w_j, errors = lorentz_aaa(z_k, f_test(z_k, residues, poles),
+                                      mmax=10, return_errors=True)
 
   print(f"{errors=}")
-
-  z_j = np.concatenate([z_j, -np.conj(z_j)])
-  f_j = f_j[:, 0]
-  f_j = np.concatenate([f_j, np.conj(f_j)])
-  w_j = np.concatenate([w_j, np.conj(w_j)])
 
   r = BarycentricRational(z_j, f_j, w_j)
 
