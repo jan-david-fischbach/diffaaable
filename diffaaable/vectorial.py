@@ -21,7 +21,7 @@ def check_inputs(z_k, f_k):
 
   return z_k, f_k, M, V
 
-def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100):
+def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
   """Compute a rational approximation of `F` over the points `Z` using the
   AAA algorithm.
 
@@ -63,7 +63,11 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100):
       A = np.concatenate(np.moveaxis(A, -1, 0))
 
       # compute weights as right singular vector for smallest singular value
+      if return_errors:
+         print("start SVD")
       _, _, Vh = np.linalg.svd(A)
+      if return_errors:
+         print("finished SVD")
 
       w_j = Vh[-1, :].conj()
 
@@ -79,4 +83,6 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100):
       if errors[-1] <= reltol:
           break
 
+  if return_errors:
+    return z_j, f_j, w_j, errors
   return z_j, f_j, w_j
