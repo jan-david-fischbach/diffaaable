@@ -80,6 +80,8 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
 
       # check for convergence
       errors.append(np.linalg.norm(f_k - r_k, np.inf))
+      if return_errors:
+         print(errors[-1])
       if errors[-1] <= reltol:
           break
 
