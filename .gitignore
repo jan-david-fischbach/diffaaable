@@ -152,3 +152,5 @@ cython_debug/
 *.txt
 *.pdf
 *.pkl
+
+*.ipynb
