@@ -153,4 +153,5 @@ cython_debug/
 *.pdf
 *.pkl
 
+debug_out
 *.ipynb
