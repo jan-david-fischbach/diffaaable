@@ -38,6 +38,23 @@ def test_jacrev():
     g = jax.jacrev(pole1)
     assert np.allclose(g(np.pi/2), -0.63661977)
 
+def test_kwargs():
+    z_k = np.linspace(0, 3, 20)
+    f_k = f(z_k, np.pi)
+    aaa(z_k, f_k, tol=1e-9, mmax=50)
+
+def test_jvp():
+    z_k = np.linspace(0, 3, 20)
+    f_k = f(z_k, np.pi)
+    f_dot = np.ones_like(z_k)
+    jax.jvp(aaa, (z_k, f_k), (np.zeros_like(z_k), f_dot))
+
+def test_jvp_complex_input():
+    z_k = np.linspace(0, 3, 20, dtype=complex)
+    f_k = f(z_k, np.pi)
+    f_dot = np.ones_like(z_k)
+    jax.jvp(aaa, (z_k, f_k), (np.zeros_like(z_k), f_dot))
+
 def test_grad_simple():
     @jax.custom_jvp
     def foo(a):
@@ -70,5 +87,5 @@ def test_lstsq():
 
 
 if __name__ == "__main__":
-    test_grad_simple()
+    test_jvp_complex_input()
     #test_grad()

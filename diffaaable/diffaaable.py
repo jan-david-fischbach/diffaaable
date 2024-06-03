@@ -9,10 +9,14 @@ from functools import partial
 
 @functools.wraps(oaaa)
 @jax.custom_jvp
-def aaa(z_k, f_k, *args, **kwargs):
-  r = oaaa(z_k, f_k, *args, **kwargs)
+def aaa(z_k, f_k, tol=1e-13, mmax=100):
+  r = oaaa(z_k, f_k, tol=tol, mmax=mmax)
   z_n = r.poles()
   z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
+
+  # baryrat decides to convert to float if all poles lie on the real axis
+  z_n = z_n.astype(complex)
+
   return (r.nodes, r.values, r.weights, z_n)
 
 aaa.__doc__ = f"This is a wrapped version of `aaa` as provided by `baryrat`, providing a custom jvp to enable differentiability. For detailed information on the usage of `aaa` please refer to the original documentation: {aaa.__doc__}"
@@ -76,4 +80,4 @@ def residues(z_j,f_j,w_j,z_n):
   Ddiff_pol = (-C_pol**2).dot(w_j)
   res = N_pol / Ddiff_pol
 
-  return res
+  return jnp.nan_to_num(res)
