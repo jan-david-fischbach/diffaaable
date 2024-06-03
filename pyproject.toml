@@ -21,7 +21,8 @@ dependencies = [
   "numpy",
   "jax",
   "jaxlib",
-  "baryrat"
+  "baryrat",
+  "jaxopt"
 ]
 description = "JAX-differentiable AAA algorithm"
 keywords = ["python"]
