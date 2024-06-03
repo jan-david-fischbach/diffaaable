@@ -34,10 +34,10 @@ def test_fwd_heat():
     pathlib.Path(folder).mkdir(exist_ok=True)
     next_samples = partial(
         adaptive.next_samples_heat, batchsize=5,
-        debug=folder, resolution=(1001, 1001), debug_known_poles=known_poles)
+        debug=folder, resolution=(201, 201), debug_known_poles=known_poles)
     z_j, f_j, w_j, z_n = adaptive.adaptive_aaa(
         np.linspace(-1,2,10, dtype=complex)+1j, f_a,
-        sampling=next_samples, domain=[-5-5j, 5+5j],
+        sampling=next_samples, domain=[-5-1j, 5+1j],
         radius=0.1, evolutions=17)
     z_n = sort_poles(z_n)
     print(f"Poles: {z_n}")
