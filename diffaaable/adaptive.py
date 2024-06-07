@@ -5,17 +5,19 @@ import jax
 from jax import random
 import matplotlib.pyplot as plt
 
+Domain = tuple[complex, complex]
+
 def top_right(a: npt.NDArray[complex], b: npt.NDArray[complex]):
   return np.logical_and(a.imag>b.imag, a.real>b.real)
 
-@jax.tree_util.Partial
-def next_samples(z_n, z_k, domain, radius, randkey):
-  def domain_mask(z_n):
+def domain_mask(domain: Domain, z_n):
     larger_min = top_right(z_n, domain[0])
     smaller_max = top_right(domain[1], z_n)
     return np.logical_and(larger_min, smaller_max)
 
-  add_z_k = z_n[domain_mask(z_n)]
+@jax.tree_util.Partial
+def next_samples(z_n, z_k, domain: Domain, radius, randkey):
+  add_z_k = z_n[domain_mask(domain, z_n)]
   add_z_k += radius*np.exp(1j*2*np.pi*jax.random.uniform(randkey, add_z_k.shape))
   return add_z_k
 
