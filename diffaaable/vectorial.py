@@ -86,3 +86,14 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
   if return_errors:
     return z_j, f_j, w_j, errors
   return z_j, f_j, w_j
+
+
+def residues_vec(z_j,f_j,w_j,z_n):
+  '''vactorial residues'''
+
+  C_pol = 1.0 / (z_n[:,None] - z_j[None,:])
+  N_pol = C_pol.dot((f_j*w_j[None,:]).T)
+  Ddiff_pol = (-C_pol**2).dot(w_j)
+  res = N_pol / Ddiff_pol[:, None]
+
+  return np.nan_to_num(res.T)
