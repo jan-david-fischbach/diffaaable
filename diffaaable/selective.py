@@ -115,13 +115,19 @@ def selective_refinement_aaa(f: callable,
     sampling = Partial(next_samples_heat, debug=folder,
                        stop=0.2)
     if z_k is None:
-      z_k = sample_domain(domain, N)
-      f_k = f(z_k)
-      eval_count += len(f_k)
-      print(f"init eval: {eval_count}")
+      z_k = np.empty((0,), dtype=complex)
+      f_k = z_k.copy()
+
+    if len(z_k) < N/4:
+      z_k_new = sample_domain(domain, N)
+      f_k = np.append(f_k, f(z_k_new))
+      z_k = np.append(z_k, z_k_new)
+
+      eval_count += len(z_k_new)
+      print(f"new eval: {eval_count}")
     eval_count -= len(z_k)
     z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(
-      z_k, f, f_k_0=f_k, evolutions=N, tol=tol_aaa,
+      z_k, f, f_k_0=f_k, evolutions=N*4, tol=tol_aaa,
       domain=domain, radius=domain_size/N,
       return_samples=True, sampling=sampling, cutoff=np.inf
     )
@@ -154,12 +160,9 @@ def selective_refinement_aaa(f: callable,
   for i,sub in enumerate(subs):
     sug = poles[domain_mask(sub, poles)]
     sample_mask = domain_mask(sub, z_k)
-    if np.sum(sample_mask) > 2:
-      known_z_k = z_k[sample_mask]
-      known_f_k = f_k[sample_mask]
-    else:
-      known_z_k = None
-      known_f_k = None
+
+    known_z_k = z_k[sample_mask]
+    known_f_k = f_k[sample_mask]
 
     p, r, e = selective_refinement_aaa(
       f, sub, N, max_poles, cutoff, tol_aaa, tol_pol,
