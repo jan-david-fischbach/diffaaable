@@ -1,3 +1,4 @@
+from typing import Union
 import jax.numpy as np
 import numpy.typing as npt
 from diffaaable import aaa
@@ -76,8 +77,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
                  radius: float = None,
                  domain: tuple[complex, complex] = None,
                  f_k_0: npt.NDArray = None,
-                 sampling: callable = next_samples,
-                 f_dot: callable = None):
+                 sampling: Union[callable, str] = next_samples,
+                 f_dot: callable = None,
+                 return_samples: bool = False):
   """
   Implementation of `adaptive_aaa`
 
@@ -89,6 +91,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     Tangent of `f`. If provided JVPs of `f` will be collected throughout the
     iterations. For use in custom_jvp
   """
+
+  if sampling == "heat":
+    sampling = next_samples_heat
 
   collect_tangents = f_dot is not None
   z_k = z_k_0
@@ -149,6 +154,8 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
 
   if collect_tangents:
     return z_k, f_k, f_k_dot
+  if return_samples:
+    return z_j, f_j, w_j, z_n, z_k, f_k
   return z_j, f_j, w_j, z_n
 
 @jax.custom_jvp
@@ -159,10 +166,10 @@ def adaptive_aaa(z_k_0:np.ndarray,
                  tol: float = 1e-9,
                  mmax: int = 100,
                  radius: float = None,
-                 domain: tuple[complex, complex] = None,
+                 domain: Domain = None,
                  f_k_0:np.ndarray = None,
-                 sampling: callable = next_samples
-                 ):
+                 sampling: callable = next_samples,
+                 return_samples: bool = False):
   """ An 2x adaptive  Antoulas–Anderson algorithm for rational approximation of
   meromorphic functions that are costly to evaluate.
 
@@ -212,7 +219,7 @@ def adaptive_aaa(z_k_0:np.ndarray,
       Poles of Barycentric Approximation
   """
   return _adaptive_aaa(z_k_0, f, evolutions, cutoff, tol, mmax,
-                       radius, domain, f_k_0, sampling)
+                       radius, domain, f_k_0, sampling, return_samples)
 
 @adaptive_aaa.defjvp
 def adaptive_aaa_jvp(primals, tangents):
