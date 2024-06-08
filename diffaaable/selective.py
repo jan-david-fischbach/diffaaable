@@ -1,5 +1,6 @@
-from functools import partial
+import os
 import jax.numpy as np
+from jax.tree_util import Partial
 from diffaaable import aaa, residues
 from diffaaable.adaptive import Domain, domain_mask, adaptive_aaa, next_samples_heat
 import matplotlib.pyplot as plt
@@ -61,14 +62,14 @@ def cutoff_mask(z_k, f_k, f_k_dot, cutoff):
   m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
   return z_k[m], f_k[m], f_k_dot[m]
 
-def plot_domain(domain: Domain):
+def plot_domain(domain: Domain, size: float=1):
   left_up =    domain[0].real + 1j*domain[1].imag
   right_down = domain[1].real + 1j*domain[0].imag
 
   points = np.array([domain[0], right_down, domain[1], left_up, domain[0]])
 
   return plt.plot(points.real, points.imag,
-                  lw=np.abs(domain[1]-domain[0])/60, zorder=1)
+                  lw=size/30, zorder=1)
 
 def all_poles_known(poles, prev, tol):
   if prev is None or len(prev)!=len(poles):
@@ -79,11 +80,10 @@ def all_poles_known(poles, prev, tol):
   check = np.all(np.any(dist < tol, axis=1))
   return check
 
-sampling = partial(next_samples_heat, debug="debug_out")
 
 def selective_refinement_aaa(f: callable,
                 domain: Domain,
-                N: int = 64,
+                N: int = 36,
                 max_poles: int = 400,
                 cutoff: float = None,
                 tol_aaa: float = 1e-9,
@@ -93,35 +93,50 @@ def selective_refinement_aaa(f: callable,
                 Dmax=20,
                 use_adaptive: bool = True,
                 z_k = None, f_k = None,
+                debug_name = "d"
                 ):
   """
   """
   if Dmax == 0:
     return np.array([]), np.array([]), 0
 
-  plot_rect = plot_domain(domain)
+  domain_size = np.abs(domain[1]-domain[0])/2
+  size = domain_size*1 # for plotting
+  plot_rect = plot_domain(domain, size=size)
   color = plot_rect[0].get_color()
-  size = np.abs(domain[1]-domain[0])/2
 
   if cutoff is None:
     cutoff = np.inf
 
+  eval_count = 0
   if use_adaptive:
+    folder = f"debug_out/{debug_name}"
+    os.mkdir(folder)
+    sampling = Partial(next_samples_heat, debug=folder,
+                       stop=0.2)
     if z_k is None:
       z_k = sample_domain(domain, N)
+      f_k = f(z_k)
+      eval_count += len(f_k)
+      print(f"init eval: {eval_count}")
+    eval_count -= len(z_k)
     z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(
-      z_k, f, evolutions=N, tol=tol_aaa,
-      domain=domain, return_samples=True
+      z_k, f, f_k_0=f_k, evolutions=N, tol=tol_aaa,
+      domain=domain, radius=domain_size/N,
+      return_samples=True, sampling=sampling, cutoff=np.inf
     )
+    eval_count += len(z_k)
   else:
     if on_rim:
       z_k = sample_rim(domain, N)
     else:
       z_k = sample_domain(domain, N)
     f_k = f(z_k)
+    eval_count += len(f_k)
 
     z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=tol_aaa)
 
+  print(f"domain '{debug_name}': {domain} ->  eval: {eval_count}")
   poles = z_n[domain_mask(domain, z_n)]
 
   if len(poles)<=max_poles and all_poles_known(poles, suggestions, tol_pol):
@@ -129,27 +144,29 @@ def selective_refinement_aaa(f: callable,
     plt.savefig("debug_out/selective.png")
 
     res = residues(z_j, f_j, w_j, poles)
-    return poles, res, N
+    return poles, res, eval_count
   plt.scatter(poles.real, poles.imag, color = color, marker="+", s=size, linewidths=size/6, zorder=3)
 
-  # print(len(poles))
-  weight = 0#0.2
-  if len(poles):
-    pivot = weight*np.mean(poles) + (1-weight)*domain_center(domain)
-  else:
-    pivot = domain_center(domain)
-  subs = subdomains(domain, center=pivot)
+  subs = subdomains(domain)
 
   pol = np.empty((0,), dtype=complex)
   res = pol.copy()
-  evals = N
-  for sub in subs:
+  for i,sub in enumerate(subs):
     sug = poles[domain_mask(sub, poles)]
+    sample_mask = domain_mask(sub, z_k)
+    if np.sum(sample_mask) > 2:
+      known_z_k = z_k[sample_mask]
+      known_f_k = f_k[sample_mask]
+    else:
+      known_z_k = None
+      known_f_k = None
 
     p, r, e = selective_refinement_aaa(
-      f, sub, N, max_poles, cutoff, tol_aaa, tol_pol, suggestions=sug, Dmax=Dmax-1
+      f, sub, N, max_poles, cutoff, tol_aaa, tol_pol,
+      suggestions=sug, Dmax=Dmax-1, z_k=known_z_k, f_k=known_f_k,
+      debug_name=f"{debug_name}{i}"
     )
     pol = np.append(pol, p)
     res = np.append(res, r)
-    evals += e
-  return pol, res, evals
+    eval_count += e
+  return pol, res, eval_count

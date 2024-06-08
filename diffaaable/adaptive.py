@@ -38,7 +38,8 @@ def heat(poles, samples, mesh, sigma):
 @jax.tree_util.Partial
 def next_samples_heat(poles, samples, domain, radius, randkey,
                       resolution=(101, 101),
-                      heat=heat, batchsize=1, debug=False, debug_known_poles=None):
+                      heat=heat, batchsize=1, stop=0.2,
+                      debug=False, debug_known_poles=None):
   x = np.linspace(domain[0].real, domain[1].real, resolution[0])
   y = np.linspace(domain[0].imag, domain[1].imag, resolution[1])
 
@@ -49,11 +50,15 @@ def next_samples_heat(poles, samples, domain, radius, randkey,
   for j in range(batchsize):
     heat_map = heat(poles, np.concat([samples, add_samples]), mesh, sigma=radius)
     next_i = np.argmax(heat_map)
+    if heat_map.flatten()[next_i] < stop:
+      break
     next = mesh.flatten()[next_i]
     add_samples = np.append(add_samples, next)
 
   if debug:
     heat_map = heat(poles, samples, mesh, sigma=radius)
+    ax = plt.gca()
+    plt.figure()
     plt.pcolormesh(X, Y, heat_map, vmax=1, alpha=np.clip(heat_map, 0, 1))
     plt.scatter(samples.real, samples.imag, label="samples")
     plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples")
@@ -65,6 +70,7 @@ def next_samples_heat(poles, samples, domain, radius, randkey,
     plt.legend(loc="upper right")
     plt.savefig(f"{debug}/{len(samples)}.png")
     plt.close()
+    plt.sca(ax)
 
   return add_samples
 
@@ -137,6 +143,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     key, subkey = jax.random.split(key)
     add_z_k = sampling(z_n, z_k, domain, radius, subkey)
     add_z_k_dot = np.zeros_like(add_z_k)
+
+    if len(add_z_k) == 0:
+      break
 
     if collect_tangents:
       f_k_new , f_k_dot_new = jax.jvp(
@@ -219,7 +228,8 @@ def adaptive_aaa(z_k_0:np.ndarray,
       Poles of Barycentric Approximation
   """
   return _adaptive_aaa(z_k_0, f, evolutions, cutoff, tol, mmax,
-                       radius, domain, f_k_0, sampling, return_samples)
+                       radius, domain, f_k_0, sampling,
+                       return_samples=return_samples)
 
 @adaptive_aaa.defjvp
 def adaptive_aaa_jvp(primals, tangents):

@@ -1,17 +1,16 @@
 import jax;
 jax.config.update('jax_platforms', 'cpu')
 jax.config.update("jax_enable_x64", True)
-import jax.tree_util
+from jax.tree_util import Partial
 from diffaaable import selective
 import jax.numpy as np
-from functools import partial
 
 import matplotlib.pyplot as plt
 import pytest
 
 def f1(a, x):
     return np.tan(a*x)
-f1 = jax.tree_util.Partial(f1, np.pi*(1-0.3j))
+f1 = Partial(f1, np.pi*(1-0.3j))
 
 def f2(z, N=70):
     return 1/(1-z**N)
@@ -21,11 +20,11 @@ def poles_f2(N=70):
 
 def test_fwd():
     mi, ma = (-300, 400)
-    mi, ma = (-5, 2)
-    N = 7
+    mi, ma = (-6, 2)
+    N = 70
 
     expected = poles_f2(N)
-    f = partial(f2, N=N)
+    f = Partial(f2, N=N)
 
     poles, residues, evals = selective.selective_refinement_aaa(f, (mi-1.23+(mi-1.1)*1j, ma+1+(ma+2)*1j))
     print(f"Poles: {poles}")
