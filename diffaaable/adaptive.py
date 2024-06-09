@@ -5,11 +5,11 @@ from diffaaable import aaa
 import jax
 from jax import random
 import matplotlib.pyplot as plt
-
+from functools import partial
 Domain = tuple[complex, complex]
 
 def top_right(a: npt.NDArray[complex], b: npt.NDArray[complex]):
-  return np.logical_and(a.imag>b.imag, a.real>b.real)
+  return np.logical_and(a.imag>=b.imag, a.real>=b.real)
 
 def domain_mask(domain: Domain, z_n):
     larger_min = top_right(z_n, domain[0])
@@ -24,21 +24,21 @@ def next_samples(z_n, z_k, domain: Domain, radius, randkey):
 
 
 def heat(poles, samples, mesh, sigma):
-  f_p = np.sum(
+  f_p = np.nansum(
     np.exp(-np.abs(poles[:, None, None]-mesh[None, :])**2/sigma**2),
     axis=0
   )
 
-  f = f_p / np.sum(
+  f = f_p / np.nansum(
     sigma**2/np.abs(mesh[None, :]-samples[:, None, None])**2,
     axis=0
   )
   return f
 
-@jax.jit
+@partial(jax.jit, static_argnames=["resolution", "batchsize"])
 def _next_samples_heat(
   poles, samples, domain, radius, randkey, resolution=(101, 101),
-  heat=heat, batchsize=1, stop=0.2
+  batchsize=1, stop=0.2
   ):
 
   x = np.linspace(domain[0].real, domain[1].real, resolution[0])
@@ -50,10 +50,9 @@ def _next_samples_heat(
   add_samples = np.empty(0, dtype=complex)
   for j in range(batchsize):
     heat_map = heat(poles, np.concat([samples, add_samples]), mesh, sigma=radius)
-    next_i = np.argmax(heat_map)
-    if heat_map.flatten()[next_i] < stop:
-      break
-    next = mesh.flatten()[next_i]
+    next_i = np.unravel_index(np.nanargmax(heat_map), heat_map.shape)
+
+    next = np.where(heat_map[next_i] < stop, np.nan, mesh[next_i])
     add_samples = np.append(add_samples, next)
 
   return add_samples
@@ -61,13 +60,15 @@ def _next_samples_heat(
 @jax.tree_util.Partial
 def next_samples_heat(
   poles, samples, domain, radius, randkey, resolution=(101, 101),
-  heat=heat, batchsize=1, stop=0.2, debug=False, debug_known_poles=None
+  batchsize=1, stop=0.2, debug=False, debug_known_poles=None
   ):
 
   add_samples = _next_samples_heat(
     poles, samples, domain, radius, randkey, resolution,
-    heat, batchsize, stop
+    batchsize, stop
   )
+
+  add_samples = add_samples[~np.isnan(add_samples)]
 
   if debug:
     ax = plt.gca()
@@ -78,8 +79,8 @@ def next_samples_heat(
     plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples", zorder=3)
     if debug_known_poles is not None:
       plt.scatter(debug_known_poles.real, debug_known_poles.imag, color="C3", marker="+", label="known pole")
-    plt.xlim(min(x), max(x))
-    plt.ylim(min(y), max(y))
+    plt.xlim(domain[0].real, domain[1].real)
+    plt.ylim(domain[0].imag, domain[1].imag)
     plt.legend(loc="upper right")
     plt.savefig(f"{debug}/{len(samples)}.png")
     plt.close()

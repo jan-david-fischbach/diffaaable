@@ -1,4 +1,5 @@
 import os
+import pathlib
 import jax.numpy as np
 from jax.tree_util import Partial
 from diffaaable import aaa, residues
@@ -31,11 +32,11 @@ def sample_rim(domain: Domain, N: int):
   z_k_r = np.linspace(domain[0].real, domain[1].real, side_N+2)[1:-1]
   z_k_i = np.linspace(domain[0].imag, domain[1].imag, side_N+2)[1:-1] * 1j
   return np.array([
-    domain[0].imag + z_k_r,
-    domain[1].imag + z_k_r,
+    1j*domain[0].imag + z_k_r,
+    1j*domain[1].imag + z_k_r,
     domain[0].real + z_k_i,
     domain[1].real + z_k_i
-  ])
+  ]).flatten()
 
 def anti_domain(domain: Domain):
   return (
@@ -120,9 +121,9 @@ def selective_refinement_aaa(f: callable,
   eval_count = 0
   if use_adaptive:
     folder = f"debug_out/{debug_name}"
-    os.mkdir(folder)
+    pathlib.Path(folder).mkdir(parents=True, exist_ok=True)
     sampling = Partial(next_samples_heat, debug=folder,
-                       stop=0.1, resolution=(101, 101))
+                       stop=0.1, resolution=(101, 101), batchsize=10)
     if z_k is None:
       z_k = np.empty((0,), dtype=complex)
       f_k = z_k.copy()
@@ -137,7 +138,7 @@ def selective_refinement_aaa(f: callable,
     eval_count -= len(z_k)
     z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(
       z_k, f, f_k_0=f_k, evolutions=N*16, tol=tol_aaa,
-      domain=domain, radius=domain_size/(2*N),
+      domain=reduced_domain(domain, 1.02), radius=4*domain_size/(N), #NOTE: actually increased domain :/
       return_samples=True, sampling=sampling, cutoff=np.inf
     )
     eval_count += len(z_k)
