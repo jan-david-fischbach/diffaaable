@@ -5,7 +5,7 @@ from diffaaable import aaa, residues
 from diffaaable.adaptive import Domain, domain_mask, adaptive_aaa, next_samples_heat
 import matplotlib.pyplot as plt
 
-def increased_domain(domain, reduction=1+1e-2):
+def reduced_domain(domain, reduction=1-1/12):
   r = reduction
   return (
     domain[0]*r+domain[1]*(1-r),
@@ -19,7 +19,7 @@ def sample_cross(domain):
 
 def sample_domain(domain: Domain, N: int):
   sqrt_N = np.round(np.sqrt(N)).astype(int)
-  domain = increased_domain(domain)
+  domain = reduced_domain(domain)
   z_k_r = np.linspace(domain[0].real, domain[1].real, sqrt_N)
   z_k_i = np.linspace(domain[0].imag, domain[1].imag, sqrt_N)
   Z_r, Z_i = np.meshgrid(z_k_r, z_k_i)
@@ -46,17 +46,23 @@ def anti_domain(domain: Domain):
 def domain_center(domain: Domain):
   return np.mean(np.array(domain))
 
-def subdomains(domain: Domain, center: complex=None):
+def subdomains(domain: Domain, divide_horizontal: bool, center: complex=None):
   if center is None:
     center = domain_center(domain)
   left_up =    domain[0].real + 1j*domain[1].imag
   right_down = domain[1].real + 1j*domain[0].imag
-  return [
+
+  subs = [
     (center, domain[1]),
     anti_domain((left_up, center)),
     (domain[0], center),
     anti_domain((center, right_down)),
   ]
+
+  if divide_horizontal:
+    return [(subs[1][0], subs[0][1]), (subs[2][0], subs[3][1])]
+  return   [(subs[2][0], subs[1][1]), (subs[3][0], subs[0][1])]
+
 
 def cutoff_mask(z_k, f_k, f_k_dot, cutoff):
   m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
@@ -74,7 +80,7 @@ def plot_domain(domain: Domain, size: float=1):
 def all_poles_known(poles, prev, tol):
   if prev is None or len(prev)!=len(poles):
     return False
-  return True
+  #return True
 
   dist = np.abs(poles[:, None] - prev[None, :])
   check = np.all(np.any(dist < tol, axis=1))
@@ -93,13 +99,16 @@ def selective_refinement_aaa(f: callable,
                 Dmax=20,
                 use_adaptive: bool = True,
                 z_k = None, f_k = None,
-                debug_name = "d"
+                divide_horizontal=True,
+                debug_name = "d",
                 ):
   """
+  TODO: allow access to samples slightly outside of domain
   """
   if Dmax == 0:
     return np.array([]), np.array([]), 0
 
+  print(f"start domain '{debug_name}'")
   domain_size = np.abs(domain[1]-domain[0])/2
   size = domain_size*1 # for plotting
   plot_rect = plot_domain(domain, size=size)
@@ -113,7 +122,7 @@ def selective_refinement_aaa(f: callable,
     folder = f"debug_out/{debug_name}"
     os.mkdir(folder)
     sampling = Partial(next_samples_heat, debug=folder,
-                       stop=0.2)
+                       stop=0.1, resolution=(101, 101))
     if z_k is None:
       z_k = np.empty((0,), dtype=complex)
       f_k = z_k.copy()
@@ -127,8 +136,8 @@ def selective_refinement_aaa(f: callable,
       print(f"new eval: {eval_count}")
     eval_count -= len(z_k)
     z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(
-      z_k, f, f_k_0=f_k, evolutions=N*4, tol=tol_aaa,
-      domain=domain, radius=domain_size/N,
+      z_k, f, f_k_0=f_k, evolutions=N*16, tol=tol_aaa,
+      domain=domain, radius=domain_size/(2*N),
       return_samples=True, sampling=sampling, cutoff=np.inf
     )
     eval_count += len(z_k)
@@ -142,18 +151,19 @@ def selective_refinement_aaa(f: callable,
 
     z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=tol_aaa)
 
-  print(f"domain '{debug_name}': {domain} ->  eval: {eval_count}")
+  print(f"domain '{debug_name}' done: {domain} ->  eval: {eval_count}")
   poles = z_n[domain_mask(domain, z_n)]
 
   if len(poles)<=max_poles and all_poles_known(poles, suggestions, tol_pol):
     plt.scatter(poles.real, poles.imag, color = color, marker="x", s=size*3, linewidths=size/2)
     plt.savefig("debug_out/selective.png")
+    print("I am done here")
 
     res = residues(z_j, f_j, w_j, poles)
     return poles, res, eval_count
   plt.scatter(poles.real, poles.imag, color = color, marker="+", s=size, linewidths=size/6, zorder=3)
 
-  subs = subdomains(domain)
+  subs = subdomains(domain, divide_horizontal)
 
   pol = np.empty((0,), dtype=complex)
   res = pol.copy()
@@ -167,7 +177,8 @@ def selective_refinement_aaa(f: callable,
     p, r, e = selective_refinement_aaa(
       f, sub, N, max_poles, cutoff, tol_aaa, tol_pol,
       suggestions=sug, Dmax=Dmax-1, z_k=known_z_k, f_k=known_f_k,
-      debug_name=f"{debug_name}{i}"
+      divide_horizontal = not divide_horizontal,
+      debug_name=f"{debug_name}{i}",
     )
     pol = np.append(pol, p)
     res = np.append(res, r)

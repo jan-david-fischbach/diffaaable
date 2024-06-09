@@ -35,11 +35,12 @@ def heat(poles, samples, mesh, sigma):
   )
   return f
 
-@jax.tree_util.Partial
-def next_samples_heat(poles, samples, domain, radius, randkey,
-                      resolution=(101, 101),
-                      heat=heat, batchsize=1, stop=0.2,
-                      debug=False, debug_known_poles=None):
+@jax.jit
+def _next_samples_heat(
+  poles, samples, domain, radius, randkey, resolution=(101, 101),
+  heat=heat, batchsize=1, stop=0.2
+  ):
+
   x = np.linspace(domain[0].real, domain[1].real, resolution[0])
   y = np.linspace(domain[0].imag, domain[1].imag, resolution[1])
 
@@ -55,14 +56,26 @@ def next_samples_heat(poles, samples, domain, radius, randkey,
     next = mesh.flatten()[next_i]
     add_samples = np.append(add_samples, next)
 
+  return add_samples
+
+@jax.tree_util.Partial
+def next_samples_heat(
+  poles, samples, domain, radius, randkey, resolution=(101, 101),
+  heat=heat, batchsize=1, stop=0.2, debug=False, debug_known_poles=None
+  ):
+
+  add_samples = _next_samples_heat(
+    poles, samples, domain, radius, randkey, resolution,
+    heat, batchsize, stop
+  )
+
   if debug:
-    heat_map = heat(poles, samples, mesh, sigma=radius)
     ax = plt.gca()
     plt.figure()
-    plt.pcolormesh(X, Y, heat_map, vmax=1, alpha=np.clip(heat_map, 0, 1))
-    plt.scatter(samples.real, samples.imag, label="samples")
-    plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples")
-    plt.scatter(poles.real, poles.imag, color="C1", marker="x", label="est. pole")
+    #plt.pcolormesh(X, Y, heat_map, vmax=1, alpha=np.clip(heat_map, 0, 1))
+    plt.scatter(samples.real, samples.imag, label="samples", zorder=1)
+    plt.scatter(poles.real, poles.imag, color="C1", marker="x", label="est. pole", zorder=2)
+    plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples", zorder=3)
     if debug_known_poles is not None:
       plt.scatter(debug_known_poles.real, debug_known_poles.imag, color="C3", marker="+", label="known pole")
     plt.xlim(min(x), max(x))
