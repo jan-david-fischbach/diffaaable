@@ -1,6 +1,7 @@
 import os
 import pathlib
 import jax.numpy as np
+import numpy as onp
 from jax.tree_util import Partial
 from diffaaable import aaa, residues
 from diffaaable.adaptive import Domain, domain_mask, adaptive_aaa, next_samples_heat
@@ -97,33 +98,32 @@ def selective_refinement_aaa(f: callable,
                 tol_pol: float = 1e-5,
                 suggestions = None,
                 on_rim: bool = False,
-                Dmax=20,
+                Dmax=30,
                 use_adaptive: bool = True,
                 z_k = None, f_k = None,
                 divide_horizontal=True,
                 debug_name = "d",
+                stop = 0.1,
+                batchsize=10
                 ):
   """
   TODO: allow access to samples slightly outside of domain
   """
-  if Dmax == 0:
-    return np.array([]), np.array([]), 0
 
-  print(f"start domain '{debug_name}'")
+  print(f"start domain '{debug_name}', {Dmax=}")
+  folder = f"debug_out/{debug_name:0<33}"
   domain_size = np.abs(domain[1]-domain[0])/2
-  size = domain_size*1 # for plotting
-  plot_rect = plot_domain(domain, size=size)
-  color = plot_rect[0].get_color()
+  size = domain_size/2 # for plotting
+  #plot_rect = plot_domain(domain, size=30)
+  #color = plot_rect[0].get_color()
 
   if cutoff is None:
     cutoff = np.inf
 
   eval_count = 0
   if use_adaptive:
-    folder = f"debug_out/{debug_name:o<12}"
-    pathlib.Path(folder).mkdir(parents=True, exist_ok=True)
     sampling = Partial(next_samples_heat, debug=folder,
-                       stop=0.1, resolution=(101, 101), batchsize=10)
+                       stop=stop, resolution=(101, 101), batchsize=batchsize)
     if z_k is None:
       z_k = np.empty((0,), dtype=complex)
       f_k = z_k.copy()
@@ -147,23 +147,26 @@ def selective_refinement_aaa(f: callable,
     if on_rim:
       z_k = sample_rim(domain, N)
     else:
-      z_k = sample_domain(domain, N)
+      z_k = sample_domain(reduced_domain(domain, 1.05), N)
     f_k = f(z_k)
     eval_count += len(f_k)
-
-    z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=tol_aaa)
+    try:
+      z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=tol_aaa)
+    except onp.linalg.LinAlgError as e: 
+      z_n = z_j = f_j = w_j = np.empty((0,))
 
   print(f"domain '{debug_name}' done: {domain} ->  eval: {eval_count}")
   poles = z_n[domain_mask(domain, z_n)]
 
-  if len(poles)<=max_poles and all_poles_known(poles, suggestions, tol_pol):
-    plt.scatter(poles.real, poles.imag, color = color, marker="x", s=size*3, linewidths=size/2)
-    plt.savefig("debug_out/selective.png")
+  if (Dmax == 0 or 
+    (len(poles)<=max_poles and all_poles_known(poles, suggestions, tol_pol))):
+
+    #plt.scatter(poles.real, poles.imag, color = color, marker="x")#, s=size*3, linewidths=size/2)
     print("I am done here")
 
     res = residues(z_j, f_j, w_j, poles)
     return poles, res, eval_count
-  plt.scatter(poles.real, poles.imag, color = color, marker="+", s=size, linewidths=size/6, zorder=3)
+  #plt.scatter(poles.real, poles.imag, color = color, marker="+", s=0.2, zorder=3)#, s=size, linewidths=size/6)
 
   subs = subdomains(domain, divide_horizontal)
 
@@ -178,11 +181,16 @@ def selective_refinement_aaa(f: callable,
 
     p, r, e = selective_refinement_aaa(
       f, sub, N, max_poles, cutoff, tol_aaa, tol_pol,
+      use_adaptive=use_adaptive,
       suggestions=sug, Dmax=Dmax-1, z_k=known_z_k, f_k=known_f_k,
       divide_horizontal = not divide_horizontal,
-      debug_name=f"{debug_name}{i}",
+      debug_name=f"{debug_name}{i+1}",
     )
     pol = np.append(pol, p)
     res = np.append(res, r)
     eval_count += e
+  # if len(pol) > 0:  
+  #   plt.xlim(domain[0].real, domain[1].real)
+  #   plt.ylim(domain[0].imag, domain[1].imag)
+  #   plt.savefig(f"debug_out/{debug_name:0<33}.png")
   return pol, res, eval_count
