@@ -153,13 +153,13 @@ def selective_refinement_aaa(f: callable,
     eval_count += len(f_k)
     try:
       z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=tol_aaa)
-    except onp.linalg.LinAlgError as e: 
+    except onp.linalg.LinAlgError as e:
       z_n = z_j = f_j = w_j = np.empty((0,))
 
   print(f"domain '{debug_name}' done: {domain} ->  eval: {eval_count}")
   poles = z_n[domain_mask(domain, z_n)]
 
-  if (Dmax == 0 or 
+  if (Dmax == 0 or
     (len(poles)<=max_poles and all_poles_known(poles, suggestions, tol_pol))):
 
     #plt.scatter(poles.real, poles.imag, color = color, marker="x")#, s=size*3, linewidths=size/2)
@@ -190,7 +190,7 @@ def selective_refinement_aaa(f: callable,
     pol = np.append(pol, p)
     res = np.append(res, r)
     eval_count += e
-  # if len(pol) > 0:  
+  # if len(pol) > 0:
   #   plt.xlim(domain[0].real, domain[1].real)
   #   plt.ylim(domain[0].imag, domain[1].imag)
   #   plt.savefig(f"debug_out/{debug_name:0<33}.png")
