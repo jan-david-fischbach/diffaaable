@@ -55,7 +55,7 @@ def _next_samples_heat(
     next = np.where(heat_map[next_i] < stop, np.nan, mesh[next_i])
     add_samples = np.append(add_samples, next)
 
-  return add_samples
+  return add_samples, X, Y, heat(poles, np.concat([samples]), mesh, sigma=radius)
 
 @jax.tree_util.Partial
 def next_samples_heat(
@@ -63,7 +63,7 @@ def next_samples_heat(
   batchsize=1, stop=0.2, debug=False, debug_known_poles=None
   ):
 
-  add_samples = _next_samples_heat(
+  add_samples, X, Y, heat_map = _next_samples_heat(
     poles, samples, domain, radius, randkey, resolution,
     batchsize, stop
   )
@@ -73,7 +73,9 @@ def next_samples_heat(
   if debug:
     ax = plt.gca()
     plt.figure()
-    #plt.pcolormesh(X, Y, heat_map, vmax=1, alpha=np.clip(heat_map, 0, 1))
+    plt.title(f"radius={radius}")
+    plt.pcolormesh(X, Y, heat_map, vmax=1)#, alpha=np.clip(heat_map, 0, 1))
+    plt.colorbar()
     plt.scatter(samples.real, samples.imag, label="samples", zorder=1)
     plt.scatter(poles.real, poles.imag, color="C1", marker="x", label="est. pole", zorder=2)
     plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples", zorder=3)
@@ -81,7 +83,7 @@ def next_samples_heat(
       plt.scatter(debug_known_poles.real, debug_known_poles.imag, color="C3", marker="+", label="known pole")
     plt.xlim(domain[0].real, domain[1].real)
     plt.ylim(domain[0].imag, domain[1].imag)
-    plt.legend(loc="upper right")
+    plt.legend(loc="lower right")
     plt.savefig(f"{debug}/{len(samples)}.png")
     plt.close()
     plt.sca(ax)
@@ -154,6 +156,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot)
     z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol, mmax)
 
+    if i==evolutions-1:
+      break
+
     key, subkey = jax.random.split(key)
     add_z_k = sampling(z_n, z_k, domain, radius, subkey)
     add_z_k_dot = np.zeros_like(add_z_k)
@@ -193,7 +198,7 @@ def adaptive_aaa(z_k_0:np.ndarray,
                  f_k_0:np.ndarray = None,
                  sampling: callable = next_samples,
                  return_samples: bool = False):
-  """ An 2x adaptive  Antoulas–Anderson algorithm for rational approximation of
+  """ An 2x adaptive Antoulas–Anderson algorithm for rational approximation of
   meromorphic functions that are costly to evaluate.
 
   The algorithm iteratively places additional sample points close to estimated
