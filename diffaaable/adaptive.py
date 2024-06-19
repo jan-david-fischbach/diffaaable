@@ -105,8 +105,8 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
                  f_k_0: npt.NDArray = None,
                  sampling: Union[callable, str] = next_samples,
                  prev_z_n: npt.NDArray = None,
-                 f_dot: callable = None,
-                 return_samples: bool = False):
+                 return_samples: bool = False,
+                 f_dot: callable = None):
   """
   Implementation of `adaptive_aaa`
 
@@ -258,9 +258,11 @@ def adaptive_aaa(z_k_0:np.ndarray,
   z_n: np.array
       Poles of Barycentric Approximation
   """
-  return _adaptive_aaa(z_k_0, f, evolutions, cutoff, tol, mmax,
-                       radius, domain, f_k_0, sampling, prev_z_n,
-                       return_samples=return_samples)
+  return _adaptive_aaa(
+    z_k_0=z_k_0, f=f, evolutions=evolutions, cutoff=cutoff, tol=tol, mmax=mmax,
+    radius=radius, domain=domain, f_k_0=f_k_0, sampling=sampling,
+    prev_z_n=prev_z_n, return_samples=return_samples
+  )
 
 @adaptive_aaa.defjvp
 def adaptive_aaa_jvp(primals, tangents):
