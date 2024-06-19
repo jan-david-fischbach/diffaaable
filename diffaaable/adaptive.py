@@ -17,8 +17,12 @@ def domain_mask(domain: Domain, z_n):
     return np.logical_and(larger_min, smaller_max)
 
 @jax.tree_util.Partial
-def next_samples(z_n, z_k, domain: Domain, radius, randkey):
-  add_z_k = z_n[domain_mask(domain, z_n)]
+def next_samples(z_n, prev_z_n, z_k, domain: Domain, radius, randkey, tolerance=1e-9):
+  movement = np.min(np.abs(z_n[:, None]-prev_z_n[None, :]), axis=-1)
+  unstable = movement > tolerance
+  #print(movement)
+  z_n_unstable = z_n[unstable]
+  add_z_k = z_n_unstable[domain_mask(domain, z_n_unstable)]
   add_z_k += radius*np.exp(1j*2*np.pi*jax.random.uniform(randkey, add_z_k.shape))
   return add_z_k
 
@@ -37,7 +41,7 @@ def heat(poles, samples, mesh, sigma):
 
 @partial(jax.jit, static_argnames=["resolution", "batchsize"])
 def _next_samples_heat(
-  poles, samples, domain, radius, randkey, resolution=(101, 101),
+  poles, prev_poles, samples, domain, radius, randkey, resolution=(101, 101),
   batchsize=1, stop=0.2
   ):
 
@@ -59,12 +63,12 @@ def _next_samples_heat(
 
 @jax.tree_util.Partial
 def next_samples_heat(
-  poles, samples, domain, radius, randkey, resolution=(101, 101),
+  poles, prev_poles, samples, domain, radius, randkey, resolution=(101, 101),
   batchsize=1, stop=0.2, debug=False, debug_known_poles=None
   ):
 
   add_samples, X, Y, heat_map = _next_samples_heat(
-    poles, samples, domain, radius, randkey, resolution,
+    poles, prev_poles, samples, domain, radius, randkey, resolution,
     batchsize, stop
   )
 
@@ -100,6 +104,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
                  domain: tuple[complex, complex] = None,
                  f_k_0: npt.NDArray = None,
                  sampling: Union[callable, str] = next_samples,
+                 prev_z_n: npt.NDArray = None,
                  f_dot: callable = None,
                  return_samples: bool = False):
   """
@@ -147,6 +152,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
   if radius is None:
     radius = 1e-3 * max_dist
 
+  if prev_z_n is None:
+    prev_z_n = np.array([np.inf], dtype=complex)
+
   def mask(z_k, f_k, f_k_dot):
     m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
     return z_k[m], f_k[m], f_k_dot[m]
@@ -160,7 +168,10 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
       break
 
     key, subkey = jax.random.split(key)
-    add_z_k = sampling(z_n, z_k, domain, radius, subkey)
+    #print(f"{z_n=}")
+    #print(f"{prev_z_n=}")
+    add_z_k = sampling(z_n, prev_z_n, z_k, domain, radius, subkey)
+    prev_z_n = z_n
     add_z_k_dot = np.zeros_like(add_z_k)
 
     if len(add_z_k) == 0:
@@ -197,6 +208,7 @@ def adaptive_aaa(z_k_0:np.ndarray,
                  domain: Domain = None,
                  f_k_0:np.ndarray = None,
                  sampling: callable = next_samples,
+                 prev_z_n: npt.NDArray = None,
                  return_samples: bool = False):
   """ An 2x adaptive Antoulas–Anderson algorithm for rational approximation of
   meromorphic functions that are costly to evaluate.
@@ -247,7 +259,7 @@ def adaptive_aaa(z_k_0:np.ndarray,
       Poles of Barycentric Approximation
   """
   return _adaptive_aaa(z_k_0, f, evolutions, cutoff, tol, mmax,
-                       radius, domain, f_k_0, sampling,
+                       radius, domain, f_k_0, sampling, prev_z_n,
                        return_samples=return_samples)
 
 @adaptive_aaa.defjvp
