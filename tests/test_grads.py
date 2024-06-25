@@ -87,5 +87,5 @@ def test_lstsq():
 
 
 if __name__ == "__main__":
-    test_jvp_complex_input()
-    #test_grad()
+    #test_jvp_complex_input()
+    test_grad()

@@ -23,6 +23,9 @@ aaa.__doc__ = f"This is a wrapped version of `aaa` as provided by `baryrat`, pro
 
 @aaa.defjvp
 def aaa_jvp(primals, tangents):
+  """
+  Derivatives according to https://arxiv.org/pdf/2403.19404
+  """
   z_k_full, f_k = primals[:2]
   z_dot, f_dot = tangents[:2]
 
@@ -38,26 +41,29 @@ def aaa_jvp(primals, tangents):
   if np.any(z_dot):
     raise NotImplementedError("Parametrizing the sampling positions z_k is not supported")
   z_k_dot = z_dot[~chosen]
-  f_k_dot = f_dot[~chosen]
+  f_k_dot = f_dot[~chosen] # $\del f_k / \del p$
 
-  # this is not very elegant :/ have to track which f_dot corresponds to z_k
+  ##################################################
+  # We have to track which f_dot corresponds to z_k
   sort_orig = jnp.argsort(jnp.abs(z_k_full[chosen]))
   sort_out = jnp.argsort(jnp.argsort(jnp.abs(z_j)))
 
   z_j_dot = z_dot[chosen][sort_orig][sort_out]
   f_j_dot = f_dot[chosen][sort_orig][sort_out]
+  ##################################################
 
-  cc = 1/(z_k.reshape(-1, 1)-z_j.reshape(1, -1)) # j x k
-  a1 = cc @ w_j
-  a = cc @ (f_j_dot * w_j)
+  C = 1/(z_k[:, None]-z_j[None, :]) # Cauchy matrix k x j
 
-  A = (f_j.reshape(1, -1) - f_k.reshape(-1, 1))*cc/a1.reshape(-1, 1)
-  b = f_k_dot - a/a1
+  d = C @ w_j # denominator in barycentric formula
+  via_f_j = C @ (f_j_dot * w_j) / d # $\sum_j f_j^\prime \frac{\del r}{\del f_j}$
+
+  A = (f_j[None, :] - f_k[:, None])*C/d[:, None] #why???
+  b = f_k_dot - via_f_j
 
   A = jnp.concatenate([A, 2*w_j.reshape(1, -1)])
   b = jnp.append(b, 0)
 
-  with jax.disable_jit():
+  with jax.disable_jit(): #otherwise backwards differentiation led to error
     w_j_dot, _, _, _ = jnp.linalg.lstsq(A, b)
 
 

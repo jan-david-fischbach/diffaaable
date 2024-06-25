@@ -131,7 +131,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     args, _ = jax.tree.flatten(f)
     args_dot, _ = jax.tree.flatten(f_dot)
     z_k_dot = np.zeros_like(z_k)
-    f_k , f_k_dot = jax.jvp(
+    f_k, f_k_dot = jax.jvp(
       f_unpartial, (*args, z_k), (*args_dot, z_k_dot)
     )
   else:
