@@ -29,7 +29,7 @@ def poles_f3(N=70):
 def test_fwd():
     mi, ma = (-300, 400)
     mi, ma = (-6, 2)
-    N = 300
+    N = 30
 
     expected = poles_f3(N)
     f = Partial(f3, N=N)

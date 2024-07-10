@@ -17,17 +17,24 @@ def domain_mask(domain: Domain, z_n):
     return np.logical_and(larger_min, smaller_max)
 
 @jax.tree_util.Partial
-def next_samples(z_n, z_k, domain: Domain, radius, randkey):
-  add_z_k = z_n[domain_mask(domain, z_n)]
+def next_samples(z_n, prev_z_n, z_k, domain: Domain, radius, randkey, tolerance=1e-9):
+  movement = np.min(np.abs(z_n[:, None]-prev_z_n[None, :]), axis=-1)
+  unstable = movement > tolerance
+  #print(movement)
+  z_n_unstable = z_n[unstable]
+  add_z_k = z_n_unstable[domain_mask(domain, z_n_unstable)]
   add_z_k += radius*np.exp(1j*2*np.pi*jax.random.uniform(randkey, add_z_k.shape))
   return add_z_k
 
 
 def heat(poles, samples, mesh, sigma):
+  #jax.debug.print("poles: {}", poles)
   f_p = np.nansum(
     np.exp(-np.abs(poles[:, None, None]-mesh[None, :])**2/sigma**2),
     axis=0
   )
+
+  #jax.debug.print("{}", f_p)
 
   f = f_p / np.nansum(
     sigma**2/np.abs(mesh[None, :]-samples[:, None, None])**2,
@@ -37,14 +44,14 @@ def heat(poles, samples, mesh, sigma):
 
 @partial(jax.jit, static_argnames=["resolution", "batchsize"])
 def _next_samples_heat(
-  poles, samples, domain, radius, randkey, resolution=(101, 101),
+  poles, prev_poles, samples, domain, radius, randkey, resolution=(101, 101),
   batchsize=1, stop=0.2
   ):
 
   x = np.linspace(domain[0].real, domain[1].real, resolution[0])
   y = np.linspace(domain[0].imag, domain[1].imag, resolution[1])
 
-  X, Y = np.meshgrid(x,y)
+  X, Y = np.meshgrid(x,y, indexing="ij")
   mesh = X +1j*Y
 
   add_samples = np.empty(0, dtype=complex)
@@ -59,12 +66,12 @@ def _next_samples_heat(
 
 @jax.tree_util.Partial
 def next_samples_heat(
-  poles, samples, domain, radius, randkey, resolution=(101, 101),
+  poles, prev_poles, samples, domain, radius, randkey, resolution=(101, 101),
   batchsize=1, stop=0.2, debug=False, debug_known_poles=None
   ):
 
   add_samples, X, Y, heat_map = _next_samples_heat(
-    poles, samples, domain, radius, randkey, resolution,
+    poles, prev_poles, samples, domain, radius, randkey, resolution,
     batchsize, stop
   )
 
@@ -74,21 +81,29 @@ def next_samples_heat(
     ax = plt.gca()
     plt.figure()
     plt.title(f"radius={radius}")
-    plt.pcolormesh(X, Y, heat_map, vmax=1)#, alpha=np.clip(heat_map, 0, 1))
-    plt.colorbar()
-    plt.scatter(samples.real, samples.imag, label="samples", zorder=1)
-    plt.scatter(poles.real, poles.imag, color="C1", marker="x", label="est. pole", zorder=2)
-    plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples", zorder=3)
-    if debug_known_poles is not None:
-      plt.scatter(debug_known_poles.real, debug_known_poles.imag, color="C3", marker="+", label="known pole")
-    plt.xlim(domain[0].real, domain[1].real)
-    plt.ylim(domain[0].imag, domain[1].imag)
-    plt.legend(loc="lower right")
+    if resolution[1]>1:
+      plt.pcolormesh(X, Y, heat_map, vmax=1)#, alpha=np.clip(heat_map, 0, 1))
+      plt.colorbar()
+      plt.scatter(samples.real, samples.imag, label="samples", zorder=1)
+      plt.scatter(poles.real, poles.imag, color="C1", marker="x", label="est. pole", zorder=2)
+      plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples", zorder=3)
+      if debug_known_poles is not None:
+        plt.scatter(debug_known_poles.real, debug_known_poles.imag, color="C3", marker="+", label="known pole")
+      plt.xlim(domain[0].real, domain[1].real)
+      plt.ylim(domain[0].imag, domain[1].imag)
+      plt.legend(loc="lower right")
+    else:
+      plt.plot(np.squeeze(X), np.squeeze(heat_map))
+      plt.scatter(samples.real, np.zeros(len(samples)))
+      plt.scatter(poles.real, np.zeros(len(poles)), color="C1", marker="x", label="est. pole", zorder=2)
+      plt.xlim(domain[0].real, domain[1].real)
     plt.savefig(f"{debug}/{len(samples)}.png")
     plt.close()
     plt.sca(ax)
 
   return add_samples
+
+aaa = jax.tree_util.Partial(aaa)
 
 def _adaptive_aaa(z_k_0: npt.NDArray,
                  f: callable,
@@ -100,8 +115,10 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
                  domain: tuple[complex, complex] = None,
                  f_k_0: npt.NDArray = None,
                  sampling: Union[callable, str] = next_samples,
-                 f_dot: callable = None,
-                 return_samples: bool = False):
+                 prev_z_n: npt.NDArray = None,
+                 return_samples: bool = False,
+                 aaa: callable = aaa,
+                 f_dot: callable = None):
   """
   Implementation of `adaptive_aaa`
 
@@ -126,7 +143,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     args, _ = jax.tree.flatten(f)
     args_dot, _ = jax.tree.flatten(f_dot)
     z_k_dot = np.zeros_like(z_k)
-    f_k , f_k_dot = jax.jvp(
+    f_k, f_k_dot = jax.jvp(
       f_unpartial, (*args, z_k), (*args_dot, z_k_dot)
     )
   else:
@@ -147,8 +164,13 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
   if radius is None:
     radius = 1e-3 * max_dist
 
+  if prev_z_n is None:
+    prev_z_n = np.array([np.inf], dtype=complex)
+
   def mask(z_k, f_k, f_k_dot):
-    m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
+    m = np.abs(f_k)<cutoff
+    if m.ndim == 2:
+      m = np.all(m, axis=1) #filter out values, that have diverged too strongly
     return z_k[m], f_k[m], f_k_dot[m]
 
   key = random.key(0)
@@ -160,7 +182,10 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
       break
 
     key, subkey = jax.random.split(key)
-    add_z_k = sampling(z_n, z_k, domain, radius, subkey)
+    #print(f"{z_n=}")
+    #print(f"{prev_z_n=}")
+    add_z_k = sampling(z_n, prev_z_n, z_k, domain, radius, subkey)
+    prev_z_n = z_n
     add_z_k_dot = np.zeros_like(add_z_k)
 
     if len(add_z_k) == 0:
@@ -175,8 +200,8 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
       f_k_dot_new = np.zeros_like(f_k_new)
 
     z_k = np.append(z_k, add_z_k)
-    f_k = np.append(f_k, f_k_new)
-    f_k_dot = np.append(f_k_dot, f_k_dot_new)
+    f_k = np.concatenate([f_k, f_k_new])
+    f_k_dot = np.concatenate([f_k_dot, f_k_dot_new])
 
   z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot)
 
@@ -197,7 +222,9 @@ def adaptive_aaa(z_k_0:np.ndarray,
                  domain: Domain = None,
                  f_k_0:np.ndarray = None,
                  sampling: callable = next_samples,
-                 return_samples: bool = False):
+                 prev_z_n: npt.NDArray = None,
+                 return_samples: bool = False,
+                 aaa: callable = aaa):
   """ An 2x adaptive Antoulas–Anderson algorithm for rational approximation of
   meromorphic functions that are costly to evaluate.
 
@@ -246,9 +273,11 @@ def adaptive_aaa(z_k_0:np.ndarray,
   z_n: np.array
       Poles of Barycentric Approximation
   """
-  return _adaptive_aaa(z_k_0, f, evolutions, cutoff, tol, mmax,
-                       radius, domain, f_k_0, sampling,
-                       return_samples=return_samples)
+  return _adaptive_aaa(
+    z_k_0=z_k_0, f=f, evolutions=evolutions, cutoff=cutoff, tol=tol, mmax=mmax,
+    radius=radius, domain=domain, f_k_0=f_k_0, sampling=sampling,
+    prev_z_n=prev_z_n, return_samples=return_samples, aaa=aaa
+  )
 
 @adaptive_aaa.defjvp
 def adaptive_aaa_jvp(primals, tangents):
