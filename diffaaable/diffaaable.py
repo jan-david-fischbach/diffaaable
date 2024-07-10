@@ -5,19 +5,23 @@ import jax
 import numpy as np
 from baryrat import aaa as oaaa # ordinary aaa
 import functools
-from functools import partial
+import scipy.linalg
 
 @functools.wraps(oaaa)
 @jax.custom_jvp
 def aaa(z_k, f_k, tol=1e-13, mmax=100):
+  """
+  Wraped aaa to enable JAX based autodiff.
+  """
   r = oaaa(z_k, f_k, tol=tol, mmax=mmax)
-  z_n = r.poles()
+  z_j = r.nodes
+  f_j = r.values
+  w_j = r.weights
+  z_n = poles(z_j, w_j)
+
   z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
 
-  # baryrat decides to convert to float if all poles lie on the real axis
-  z_n = z_n.astype(complex)
-
-  return (r.nodes, r.values, r.weights, z_n)
+  return z_j, f_j, w_j, z_n
 
 aaa.__doc__ = f"This is a wrapped version of `aaa` as provided by `baryrat`, providing a custom jvp to enable differentiability. For detailed information on the usage of `aaa` please refer to the original documentation: {aaa.__doc__}"
 
@@ -25,6 +29,8 @@ aaa.__doc__ = f"This is a wrapped version of `aaa` as provided by `baryrat`, pro
 def aaa_jvp(primals, tangents):
   """
   Derivatives according to https://arxiv.org/pdf/2403.19404
+  Hints for ease of understanding the code:
+  
   """
   z_k_full, f_k = primals[:2]
   z_dot, f_dot = tangents[:2]
@@ -57,7 +63,7 @@ def aaa_jvp(primals, tangents):
   d = C @ w_j # denominator in barycentric formula
   via_f_j = C @ (f_j_dot * w_j) / d # $\sum_j f_j^\prime \frac{\del r}{\del f_j}$
 
-  A = (f_j[None, :] - f_k[:, None])*C/d[:, None] #why???
+  A = (f_j[None, :] - f_k[:, None])*C/d[:, None]
   b = f_k_dot - via_f_j
 
   A = jnp.concatenate([A, 2*w_j.reshape(1, -1)])
@@ -76,6 +82,16 @@ def aaa_jvp(primals, tangents):
 
   return primal_out, tangent_out
 
+def poles(z_j,w_j):
+  """from baryrat"""
+  f_j = np.ones_like(z_j)
+
+  B = np.eye(len(w_j) + 1)
+  B[0,0] = 0
+  E = np.block([[0, w_j],
+                [f_j[:,None], np.diag(z_j)]])
+  evals = scipy.linalg.eigvals(E, B)
+  return evals[np.isfinite(evals)]
 
 def residues(z_j,f_j,w_j,z_n):
   '''residues via formula for simple poles

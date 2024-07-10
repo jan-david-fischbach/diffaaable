@@ -28,10 +28,13 @@ def next_samples(z_n, prev_z_n, z_k, domain: Domain, radius, randkey, tolerance=
 
 
 def heat(poles, samples, mesh, sigma):
+  #jax.debug.print("poles: {}", poles)
   f_p = np.nansum(
     np.exp(-np.abs(poles[:, None, None]-mesh[None, :])**2/sigma**2),
     axis=0
   )
+
+  #jax.debug.print("{}", f_p)
 
   f = f_p / np.nansum(
     sigma**2/np.abs(mesh[None, :]-samples[:, None, None])**2,
@@ -48,7 +51,7 @@ def _next_samples_heat(
   x = np.linspace(domain[0].real, domain[1].real, resolution[0])
   y = np.linspace(domain[0].imag, domain[1].imag, resolution[1])
 
-  X, Y = np.meshgrid(x,y)
+  X, Y = np.meshgrid(x,y, indexing="ij")
   mesh = X +1j*Y
 
   add_samples = np.empty(0, dtype=complex)
@@ -78,21 +81,29 @@ def next_samples_heat(
     ax = plt.gca()
     plt.figure()
     plt.title(f"radius={radius}")
-    plt.pcolormesh(X, Y, heat_map, vmax=1)#, alpha=np.clip(heat_map, 0, 1))
-    plt.colorbar()
-    plt.scatter(samples.real, samples.imag, label="samples", zorder=1)
-    plt.scatter(poles.real, poles.imag, color="C1", marker="x", label="est. pole", zorder=2)
-    plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples", zorder=3)
-    if debug_known_poles is not None:
-      plt.scatter(debug_known_poles.real, debug_known_poles.imag, color="C3", marker="+", label="known pole")
-    plt.xlim(domain[0].real, domain[1].real)
-    plt.ylim(domain[0].imag, domain[1].imag)
-    plt.legend(loc="lower right")
+    if resolution[1]>1:
+      plt.pcolormesh(X, Y, heat_map, vmax=1)#, alpha=np.clip(heat_map, 0, 1))
+      plt.colorbar()
+      plt.scatter(samples.real, samples.imag, label="samples", zorder=1)
+      plt.scatter(poles.real, poles.imag, color="C1", marker="x", label="est. pole", zorder=2)
+      plt.scatter(add_samples.real, add_samples.imag, color="C2", label="next samples", zorder=3)
+      if debug_known_poles is not None:
+        plt.scatter(debug_known_poles.real, debug_known_poles.imag, color="C3", marker="+", label="known pole")
+      plt.xlim(domain[0].real, domain[1].real)
+      plt.ylim(domain[0].imag, domain[1].imag)
+      plt.legend(loc="lower right")
+    else:
+      plt.plot(np.squeeze(X), np.squeeze(heat_map))
+      plt.scatter(samples.real, np.zeros(len(samples)))
+      plt.scatter(poles.real, np.zeros(len(poles)), color="C1", marker="x", label="est. pole", zorder=2)
+      plt.xlim(domain[0].real, domain[1].real)
     plt.savefig(f"{debug}/{len(samples)}.png")
     plt.close()
     plt.sca(ax)
 
   return add_samples
+
+aaa = jax.tree_util.Partial(aaa)
 
 def _adaptive_aaa(z_k_0: npt.NDArray,
                  f: callable,
@@ -106,6 +117,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
                  sampling: Union[callable, str] = next_samples,
                  prev_z_n: npt.NDArray = None,
                  return_samples: bool = False,
+                 aaa: callable = aaa,
                  f_dot: callable = None):
   """
   Implementation of `adaptive_aaa`
@@ -156,7 +168,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     prev_z_n = np.array([np.inf], dtype=complex)
 
   def mask(z_k, f_k, f_k_dot):
-    m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
+    m = np.abs(f_k)<cutoff
+    if m.ndim == 2:
+      m = np.all(m, axis=1) #filter out values, that have diverged too strongly
     return z_k[m], f_k[m], f_k_dot[m]
 
   key = random.key(0)
@@ -186,8 +200,8 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
       f_k_dot_new = np.zeros_like(f_k_new)
 
     z_k = np.append(z_k, add_z_k)
-    f_k = np.append(f_k, f_k_new)
-    f_k_dot = np.append(f_k_dot, f_k_dot_new)
+    f_k = np.concatenate([f_k, f_k_new])
+    f_k_dot = np.concatenate([f_k_dot, f_k_dot_new])
 
   z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot)
 
@@ -209,7 +223,8 @@ def adaptive_aaa(z_k_0:np.ndarray,
                  f_k_0:np.ndarray = None,
                  sampling: callable = next_samples,
                  prev_z_n: npt.NDArray = None,
-                 return_samples: bool = False):
+                 return_samples: bool = False,
+                 aaa: callable = aaa):
   """ An 2x adaptive Antoulas–Anderson algorithm for rational approximation of
   meromorphic functions that are costly to evaluate.
 
@@ -261,7 +276,7 @@ def adaptive_aaa(z_k_0:np.ndarray,
   return _adaptive_aaa(
     z_k_0=z_k_0, f=f, evolutions=evolutions, cutoff=cutoff, tol=tol, mmax=mmax,
     radius=radius, domain=domain, f_k_0=f_k_0, sampling=sampling,
-    prev_z_n=prev_z_n, return_samples=return_samples
+    prev_z_n=prev_z_n, return_samples=return_samples, aaa=aaa
   )
 
 @adaptive_aaa.defjvp

@@ -1,7 +1,7 @@
 from jax import config
 config.update("jax_enable_x64", True) #important -> else aaa fails
 import jax.numpy as np
-import jax
+from diffaaable.diffaaable import poles
 
 def check_inputs(z_k, f_k):
   f_k = np.array(f_k)
@@ -44,6 +44,8 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
   reltol = tol * np.linalg.norm(f_k, np.inf)
 
   r_k = np.mean(f_k) * np.ones_like(f_k)
+  
+  mmax = min(mmax, len(f_k)//2)
 
   for m in range(mmax):
       # find largest residual
@@ -82,10 +84,11 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
          print(errors[-1])
       if errors[-1] <= reltol:
           break
-
+  
+  z_n = poles(z_j, w_j)
   if return_errors:
-    return z_j, f_j, w_j, errors
-  return z_j, f_j, w_j
+    return z_j, f_j, w_j, z_n, errors
+  return z_j, f_j, w_j, z_n
 
 
 def residues_vec(z_j,f_j,w_j,z_n):
