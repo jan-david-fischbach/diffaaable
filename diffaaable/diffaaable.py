@@ -30,7 +30,7 @@ def aaa_jvp(primals, tangents):
   """
   Derivatives according to [1]: https://arxiv.org/pdf/2403.19404
   Hints for ease of understanding the code:
-  
+
   """
   z_k_full, f_k = primals[:2]
   z_dot, f_dot = tangents[:2]
@@ -67,7 +67,7 @@ def aaa_jvp(primals, tangents):
   b = f_k_dot - via_f_j
 
   # make sure system is not underdetermined according to eq. 5 of [1]
-  A = jnp.concatenate([A, np.conj(w_j.reshape(1, -1))]) 
+  A = jnp.concatenate([A, np.conj(w_j.reshape(1, -1))])
   b = jnp.append(b, 0)
 
   with jax.disable_jit(): #otherwise backwards differentiation led to error
