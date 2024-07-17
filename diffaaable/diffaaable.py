@@ -28,7 +28,7 @@ aaa.__doc__ = f"This is a wrapped version of `aaa` as provided by `baryrat`, pro
 @aaa.defjvp
 def aaa_jvp(primals, tangents):
   """
-  Derivatives according to https://arxiv.org/pdf/2403.19404
+  Derivatives according to [1]: https://arxiv.org/pdf/2403.19404
   Hints for ease of understanding the code:
   
   """
@@ -66,12 +66,12 @@ def aaa_jvp(primals, tangents):
   A = (f_j[None, :] - f_k[:, None])*C/d[:, None]
   b = f_k_dot - via_f_j
 
-  A = jnp.concatenate([A, 2*w_j.reshape(1, -1)])
+  # make sure system is not underdetermined according to eq. 5 of [1]
+  A = jnp.concatenate([A, np.conj(w_j.reshape(1, -1))]) 
   b = jnp.append(b, 0)
 
   with jax.disable_jit(): #otherwise backwards differentiation led to error
     w_j_dot, _, _, _ = jnp.linalg.lstsq(A, b)
-
 
   z_n_dot = (
     jnp.sum(w_j_dot.reshape(-1, 1)/(z_n.reshape(1, -1)-z_j.reshape(-1, 1)),    axis=0)/
