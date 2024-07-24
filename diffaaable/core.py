@@ -70,7 +70,7 @@ Returns
 
 @aaa.defjvp
 def aaa_jvp(primals, tangents):
-  r"""Derivatives according to [1]: https://arxiv.org/pdf/2403.19404
+  r"""Derivatives according to [1].
   The implemented matrix expressions are motivated in the appendix of [2]:
 
   .. topic:: AAA Derivatives 
