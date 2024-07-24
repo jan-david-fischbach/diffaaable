@@ -153,5 +153,7 @@ cython_debug/
 *.pdf
 *.pkl
 
+!docs/assets/*.png
+
 debug_out*
 *.ipynb
