@@ -1,7 +1,7 @@
 from jax import config
 config.update("jax_enable_x64", True) #important -> else aaa fails
 import jax.numpy as np
-from diffaaable.diffaaable import poles
+from diffaaable.core import poles
 
 def check_inputs(z_k, f_k):
   f_k = np.array(f_k)
@@ -32,6 +32,7 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
       mmax: the maximum number of iterations/degree of the resulting approximant
 
   Returns:
+
 
   """
   z_k, f_k, M, V = check_inputs(z_k, f_k)
