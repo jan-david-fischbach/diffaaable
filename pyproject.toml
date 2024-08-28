@@ -44,7 +44,8 @@ dev = [
 docs = [
   "jupytext",
   "matplotlib",
-  "jupyter-book==0.15.1"
+  "jupyter-book",
+  "sphinx_math_dollar"
 ]
 
 [tool.black]
@@ -149,11 +150,11 @@ regex = '''
 [tool.towncrier]
 directory = ".changelog.d"
 filename = "CHANGELOG.md"
-issue_format = "[#{issue}](https://gitlab.kit.edu/kit/tfp-photonics/solar/diffaaable/issues/{issue})"
+issue_format = "[#{issue}](https://github.com/jan-david-fischbach/diffaaable/issues/{issue})"
 package = "diffaaable"
 start_string = "<!-- towncrier release notes start -->\n"
 template = ".changelog.d/changelog_template.jinja"
-title_format = "## [{version}](https://gitlab.kit.edu/kit/tfp-photonics/solar/diffaaable/releases/tag/v{version}) - {project_date}"
+title_format = "## [{version}](https://github.com/jan-david-fischbach/diffaaable/releases/tag/v{version}) - {project_date}"
 underlines = ["", "", ""]
 
 [[tool.towncrier.type]]

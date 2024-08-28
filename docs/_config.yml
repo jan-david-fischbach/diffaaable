@@ -12,8 +12,6 @@ execute:
   allow_errors: false
   # execute_notebooks: force
   # execute_notebooks: "off"
-  # exclude_patterns:
-  #   - '*notebooks/devsim/01_pin_waveguide*'
 
 latex:
   latex_engine: pdflatex # one of 'pdflatex', 'xelatex' (recommended for unicode), 'luatex', 'platex', 'uplatex'
@@ -26,11 +24,11 @@ html:
   use_edit_page_button: true
   use_repository_button: true
   use_issues_button: true
-  baseurl: https://gitlab.kit.edu/kit/tfp-photonics/solar/diffaaable
+  baseurl: https://github.com/jan-david-fischbach/diffaaable
 
 # Information about where the book exists on the web
 repository:
-  url: https://gitlab.kit.edu/kit/tfp-photonics/solar/diffaaable
+  url: https://github.com/jan-david-fischbach/diffaaable
   path_to_book: docs # Optional path to your book, relative to the repository root
   branch: main # Which branch of the repository should be used when creating links (optional)
 
@@ -44,15 +42,30 @@ sphinx:
     - "sphinx.ext.autodoc.typehints"
     - "sphinx.ext.autosummary"
     - "sphinx.ext.napoleon"
+    - "sphinx.ext.mathjax"
+    - "sphinx_math_dollar"
     - "sphinx.ext.viewcode"
     - "matplotlib.sphinxext.plot_directive"
   config:
-    #autodoc_typehints: description
-    autodoc_type_aliases:
-      "ComponentSpec": "ComponentSpec"
     nb_execution_show_tb: True
     nb_execution_raise_on_error: true
     nb_custom_formats:
         .py:
             - jupytext.reads
             - fmt: py
+
+parse:
+  myst_enable_extensions:  # default extensions to enable in the myst parser. See https://myst-parser.readthedocs.io/en/latest/using/syntax-optional.html
+    # - amsmath
+    - colon_fence
+    # - deflist
+    - dollarmath
+    # - html_admonition
+    # - html_image
+    - linkify
+    # - replacements
+    # - smartquotes
+    - substitution
+    - tasklist
+  myst_url_schemes: [mailto, http, https] # URI schemes that will be recognised as external URLs in Markdown links
+  myst_dmath_double_inline: true  # Allow display math ($$) within an inline context

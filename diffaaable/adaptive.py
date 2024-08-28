@@ -17,12 +17,20 @@ def domain_mask(domain: Domain, z_n):
     return np.logical_and(larger_min, smaller_max)
 
 @jax.tree_util.Partial
-def next_samples(z_n, prev_z_n, z_k, domain: Domain, radius, randkey, tolerance=1e-9):
+def next_samples(z_n, prev_z_n, z_k, domain: Domain, radius, randkey, tolerance=1e-9, min_samples=0, max_samples=0):
+  z_n = z_n[domain_mask(domain, z_n)]
   movement = np.min(np.abs(z_n[:, None]-prev_z_n[None, :]), axis=-1)
+  ranking = np.argsort(-movement)
   unstable = movement > tolerance
-  #print(movement)
-  z_n_unstable = z_n[unstable]
-  add_z_k = z_n_unstable[domain_mask(domain, z_n_unstable)]
+  if np.sum(unstable) > min_samples:
+    if max_samples != 0 and np.sum(unstable)>max_samples:
+      z_n_unstable = z_n[ranking[:max_samples]]
+    else:
+      z_n_unstable = z_n[unstable]
+  else:
+    z_n_unstable = z_n[ranking[:min_samples]]
+
+  add_z_k = z_n_unstable
   add_z_k += radius*np.exp(1j*2*np.pi*jax.random.uniform(randkey, add_z_k.shape))
   return add_z_k
 
