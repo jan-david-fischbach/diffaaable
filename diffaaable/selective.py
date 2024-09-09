@@ -3,7 +3,7 @@ import pathlib
 import jax.numpy as np
 import numpy as onp
 from jax.tree_util import Partial
-from diffaaable import aaa, residues
+from diffaaable.core import aaa, residues
 from diffaaable.adaptive import Domain, domain_mask, adaptive_aaa, next_samples_heat
 import matplotlib.pyplot as plt
 
