@@ -4,12 +4,15 @@
 format: jb-book
 root: index
 parts:
-  # - caption: Tutorial
-  #   chapters:
-  #     - file: tutorial
-  #       sections:
-  #         - file: notebooks/demo
+  - caption: Tutorial
+    chapters:
+      - file: usage
   - caption: Reference
     chapters:
-      - file: api
+      - file: api/index
+        sections:
+          - file: api/core
+          - file: api/adaptive
+          - file: api/vectorial
+          - file: api/lorentz
       - file: changelog

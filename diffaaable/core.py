@@ -1,6 +1,7 @@
 from jax import config
 config.update("jax_enable_x64", True) #important -> else aaa fails
 import jax.numpy as jnp
+import numpy.typing as npt
 import jax
 import numpy as np
 from baryrat import aaa as oaaa # ordinary aaa
@@ -9,7 +10,7 @@ import scipy.linalg
 
 @functools.wraps(oaaa)
 @jax.custom_jvp
-def aaa(z_k, f_k, tol=1e-13, mmax=100):
+def aaa(z_k: npt.NDArray, f_k: npt.NDArray, tol: float=1e-13, mmax: int=100):
   """
   Wraped aaa to enable JAX based autodiff.
   """
@@ -17,53 +18,61 @@ def aaa(z_k, f_k, tol=1e-13, mmax=100):
   z_j = r.nodes
   f_j = r.values
   w_j = r.weights
+
+  mask = w_j!=0
+  z_j = z_j[mask]
+  f_j = f_j[mask]
+  w_j = w_j[mask]
+  
   z_n = poles(z_j, w_j)
 
   z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
 
   return z_j, f_j, w_j, z_n
 
-delimiter = '  \n'
+delimiter = '    \n'
 
 aaa.__doc__ = f"""\
-This is a wrapped version of `aaa` as provided by `baryrat`,
-providing a custom jvp to enable differentiability.
+  This is a wrapped version of `aaa` as provided by `baryrat`,
+  providing a custom jvp to enable differentiability.
 
-For detailed information on the usage of `aaa` please refer to 
-the original documentation:: 
+  For detailed information on the usage of `aaa` please refer to 
+  the original documentation:: 
 
-  {delimiter.join(aaa.__doc__.splitlines())}
+    {delimiter.join(aaa.__doc__.splitlines())}
 
-.. attention:: 
-  Returns nodes, values, weights and poles, in contrast to the 
-  baryrat implementation that returns the BarycentricRational ready to be 
-  evaluated. This is done to facilitate differentiability. 
+  .. attention:: 
+    Returns nodes, values, weights and poles, in contrast to the 
+    baryrat implementation that returns the BarycentricRational ready to be 
+    evaluated. This is done to facilitate differentiability. 
 
-Arguments
-    Z (array): 
+  Parameters
+  ----------
+    z_k : array (M,)
       the sampling points of the function. Unlike for interpolation
       algorithms, where a small number of nodes is preferred, since the
       AAA algorithm chooses its support points adaptively, it is better
       to provide a finer mesh over the support.
-    F: 
-      the function to be approximated; can be given as a function or as an
-      array of function values over ``Z``.
-    tol: 
+    f_k : array (M,)
+      the function to be approximated; can be given as a callable function 
+      or as an array of function values over `z_k`.
+    tol : float
       the approximation tolerance
-    mmax: 
+    mmax : int 
       the maximum number of iterations/degree of the resulting approximant
 
-Returns
-    z_j (array (m,)): 
+  Returns
+  -------
+    z_j : array (m,)
       nodes of the barycentric approximant
 
-    f_j (array (m,)): 
+    f_j : array (m,)
       values of the barycentric approximant
 
-    w_j (array (m,)): 
+    w_j : array (m,)
       weights of the barycentric approximant
 
-    z_n (array (m-1,)): 
+    z_n : array (m-1,) 
       poles of the barycentric approximant (for convenience)
 
 """
@@ -146,9 +155,12 @@ def aaa_jvp(primals, tangents):
   with jax.disable_jit(): #otherwise backwards differentiation led to error
     w_j_dot, _, _, _ = jnp.linalg.lstsq(A, b)
 
+  denom = z_n.reshape(1, -1)-z_j.reshape(-1, 1)
+  # jax.debug.print("wj: {}", w_j.reshape(-1, 1))
+  # jax.debug.print("denom^2: {}", denom**2)
   z_n_dot = (
-    jnp.sum(w_j_dot.reshape(-1, 1)/(z_n.reshape(1, -1)-z_j.reshape(-1, 1)),    axis=0)/
-    jnp.sum(w_j.reshape(-1, 1)    /(z_n.reshape(1, -1)-z_j.reshape(-1, 1))**2, axis=0)
+    jnp.sum(w_j_dot.reshape(-1, 1)/denom,    axis=0)/
+    jnp.sum(w_j.reshape(-1, 1)    /denom**2, axis=0)
   )
 
   tangent_out = z_j_dot, f_j_dot, w_j_dot, z_n_dot
@@ -162,14 +174,16 @@ def poles(z_j,w_j):
   Thus the values $f_j$ do not contribute and don't need to be provided
   The implementation was modified from `baryrat` to support JAX AD.
 
-  Parameters:
-    z_j (array (m,)): 
+  Parameters
+  ----------
+    z_j : array (m,) 
       nodes of the barycentric rational
-    w_j (array (m,)): 
+    w_j : array (m,)
       weights of the barycentric rational
 
-  Returns:
-    z_n (array (m-1,)): 
+  Returns
+  -------
+    z_n : array (m-1,)
       poles of the barycentric rational (more strictly zeros of the denominator)
   """
   f_j = np.ones_like(z_j)
@@ -187,16 +201,18 @@ def residues(z_j,f_j,w_j,z_n):
   of quotients of analytic functions.
   The implementation was modified from `baryrat` to support JAX AD.
 
-  Parameters:
-    z_j (array (m,)): 
+  Parameters
+  ----------
+    z_j : array (m,) 
       nodes of the barycentric rational
-    w_j (array (m,)): 
+    w_j : array (m,) 
       weights of the barycentric rational
-    z_n (array (n,)): 
+    z_n : array (n,) 
       poles of interest of the barycentric rational (n<=m-1)
 
-  Returns:
-    r_n (array (n,)):
+  Returns
+  -------
+    r_n : array (n,)
       residues of poles `z_n`
   '''
 

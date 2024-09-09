@@ -22,16 +22,23 @@ def check_inputs(z_k, f_k):
   return z_k, f_k, M, V
 
 def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
-  """Compute a rational approximation of `F` over the points `Z` using the
-  AAA algorithm.
+  """Find a rational approximation to $\mathbf f(z)$ over the points $z_k$ using 
+  a modified AAA algorithm, as presented in [^4]. Importantly the weights and 
+  thus also the poles are shared between all entries of $\mathbf f(z)$.
 
-  Arguments:
-      Z (array (M,)): M sample points
-      F (array (M, V)): vector valued function values
-      tol: the approximation tolerance
-      mmax: the maximum number of iterations/degree of the resulting approximant
+  Parameters
+  ----------
+      z_k : array (M,): 
+        M sample points
+      f_k : array (M, V): 
+        vector valued function values
+      tol : float 
+        the approximation tolerance
+      mmax : int 
+        the maximum number of iterations/degree of the resulting approximant
 
   Returns:
+
 
 
   """
@@ -93,7 +100,11 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
 
 
 def residues_vec(z_j,f_j,w_j,z_n):
-  '''vactorial residues'''
+  '''Vectorial residues for given poles via formula for simple poles
+  of quotients of analytic functions. For a barycentric rational of order `m`
+  the 
+  
+  '''
 
   C_pol = 1.0 / (z_n[:,None] - z_j[None,:])
   N_pol = C_pol.dot((f_j*w_j[None,:]).T)

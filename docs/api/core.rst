@@ -1,11 +1,9 @@
-diffaaable
+Core
 ===================================
 
-.. autofunction:: diffaaable.aaa
+.. autofunction:: diffaaable.core.aaa
 
 .. automodule:: diffaaable.core
    :members:
-   
-.. :undoc-members:
 
 

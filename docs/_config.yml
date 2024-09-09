@@ -39,7 +39,7 @@ launch_buttons:
 sphinx:
   extra_extensions:
     - "sphinx.ext.autodoc"
-    - "sphinx.ext.autodoc.typehints"
+    #- "sphinx.ext.autodoc.typehints"
     - "sphinx.ext.autosummary"
     - "sphinx.ext.napoleon"
     - "sphinx.ext.mathjax"
@@ -48,7 +48,7 @@ sphinx:
     - "matplotlib.sphinxext.plot_directive"
   config:
     nb_execution_show_tb: True
-    nb_execution_raise_on_error: true
+    nb_execution_raise_on_error: True
     nb_custom_formats:
         .py:
             - jupytext.reads

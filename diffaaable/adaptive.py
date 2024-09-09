@@ -132,7 +132,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
 
   Parameters
   ----------
-  see `adaptive_aaa`
+    see `adaptive_aaa`
 
   f_dot: callable
     Tangent of `f`. If provided JVPs of `f` will be collected throughout the
@@ -220,7 +220,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
   return z_j, f_j, w_j, z_n
 
 @jax.custom_jvp
-def adaptive_aaa(z_k_0:np.ndarray,
+def adaptive_aaa(z_k_0: npt.NDArray,
                  f:callable,
                  evolutions: int = 2,
                  cutoff: float = None,
@@ -228,7 +228,7 @@ def adaptive_aaa(z_k_0:np.ndarray,
                  mmax: int = 100,
                  radius: float = None,
                  domain: Domain = None,
-                 f_k_0:np.ndarray = None,
+                 f_k_0: npt.NDArray = None,
                  sampling: callable = next_samples,
                  prev_z_n: npt.NDArray = None,
                  return_samples: bool = False,
