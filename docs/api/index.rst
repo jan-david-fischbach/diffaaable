@@ -1,11 +1,7 @@
-diffaaable
+API Reference
 ===================================
 
 .. autofunction:: diffaaable.aaa
 
-.. automodule:: diffaaable.core
+.. automodule:: diffaaable
    :members:
-   
-.. :undoc-members:
-
-

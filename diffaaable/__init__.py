@@ -2,10 +2,9 @@
 
 __version__ = "0.1.0"
 
-__all__ = ["aaa", "residues", "BarycentricRational",
-           "adaptive_aaa", "vectorial_aaa"]
+__all__ = ["aaa", "adaptive_aaa", "vectorial_aaa", "lorentz_aaa"]
 
-from diffaaable.core import aaa, residues
+from diffaaable.core import aaa
 from diffaaable.adaptive import adaptive_aaa
 from diffaaable.vectorial import vectorial_aaa
-from baryrat import BarycentricRational
+from diffaaable.lorentz import lorentz_aaa
