@@ -5,5 +5,3 @@ Core
 
 .. automodule:: diffaaable.core
    :members:
-
-

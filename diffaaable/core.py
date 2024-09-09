@@ -23,7 +23,7 @@ def aaa(z_k: npt.NDArray, f_k: npt.NDArray, tol: float=1e-13, mmax: int=100):
   z_j = z_j[mask]
   f_j = f_j[mask]
   w_j = w_j[mask]
-  
+
   z_n = poles(z_j, w_j)
 
   z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
@@ -36,15 +36,15 @@ aaa.__doc__ = f"""\
   This is a wrapped version of `aaa` as provided by `baryrat`,
   providing a custom jvp to enable differentiability.
 
-  For detailed information on the usage of `aaa` please refer to 
-  the original documentation:: 
+  For detailed information on the usage of `aaa` please refer to
+  the original documentation::
 
     {delimiter.join(aaa.__doc__.splitlines())}
 
-  .. attention:: 
-    Returns nodes, values, weights and poles, in contrast to the 
-    baryrat implementation that returns the BarycentricRational ready to be 
-    evaluated. This is done to facilitate differentiability. 
+  .. attention::
+    Returns nodes, values, weights and poles, in contrast to the
+    baryrat implementation that returns the BarycentricRational ready to be
+    evaluated. This is done to facilitate differentiability.
 
   Parameters
   ----------
@@ -54,11 +54,11 @@ aaa.__doc__ = f"""\
       AAA algorithm chooses its support points adaptively, it is better
       to provide a finer mesh over the support.
     f_k : array (M,)
-      the function to be approximated; can be given as a callable function 
+      the function to be approximated; can be given as a callable function
       or as an array of function values over `z_k`.
     tol : float
       the approximation tolerance
-    mmax : int 
+    mmax : int
       the maximum number of iterations/degree of the resulting approximant
 
   Returns
@@ -72,7 +72,7 @@ aaa.__doc__ = f"""\
     w_j : array (m,)
       weights of the barycentric approximant
 
-    z_n : array (m-1,) 
+    z_n : array (m-1,)
       poles of the barycentric approximant (for convenience)
 
 """
@@ -82,9 +82,9 @@ def aaa_jvp(primals, tangents):
   r"""Derivatives according to [1].
   The implemented matrix expressions are motivated in the appendix of [2]:
 
-  .. topic:: AAA Derivatives 
+  .. topic:: AAA Derivatives
 
-    Here we will briefly elaborate how the derivatives introduced in [1] are 
+    Here we will briefly elaborate how the derivatives introduced in [1] are
     implemented as JAX compatible Jacobian Vector products (JVPs) in `diffaaable`.
 
     Given the tangents $\frac{\partial f_k}{\partial p}$ we will use the chain rule on $r(w_j, f_j, z)$ along its weights $w_j$ and values $f_j$ (the nodes $z_j$ are treated as independent of $p$) (Equation 4 of [1]):
@@ -97,14 +97,14 @@ def aaa_jvp(primals, tangents):
     .. math::
       \mathbf{A}\mathbf{w}^\prime = \mathbf{b}
 
-    where $\mathbf{w}^\prime$ is the column vector containing $\frac{\partial w_j}{\partial p}$ and $\mathbf{b}$ and $\mathbf{A}$ are defined element wise: 
+    where $\mathbf{w}^\prime$ is the column vector containing $\frac{\partial w_j}{\partial p}$ and $\mathbf{b}$ and $\mathbf{A}$ are defined element wise:
 
     .. math::
       \begin{aligned}
           b_k &= \frac{\partial f_k}{\partial p} - \sum_{j=1}^m\frac{\partial r_k}{\partial f_j}\frac{\partial f_j}{\partial p}\\
           A_{kj} &= \frac{\partial r_k}{\partial w_j}
       \end{aligned}
-    
+
 
     These are augmented with Equation 5 of \cite{betzEfficientRationalApproximation2024} which removes the ambiguity in $\mathbf{w}^\prime$ associated with a shared phase of all weights.
 
@@ -112,7 +112,7 @@ def aaa_jvp(primals, tangents):
     \[
     \frac{\partial r_k}{\partial w_j}= \frac{1}{d(z_k)} \frac{f_j-r_k}{z_k-z_j} \approx \frac{1}{d(z_k)} \frac{f_j-f_k}{z_k-z_j}
     \]
-  
+
   """
   z_k_full, f_k = primals[:2]
   z_dot, f_dot = tangents[:2]
@@ -176,7 +176,7 @@ def poles(z_j,w_j):
 
   Parameters
   ----------
-    z_j : array (m,) 
+    z_j : array (m,)
       nodes of the barycentric rational
     w_j : array (m,)
       weights of the barycentric rational
@@ -203,11 +203,11 @@ def residues(z_j,f_j,w_j,z_n):
 
   Parameters
   ----------
-    z_j : array (m,) 
+    z_j : array (m,)
       nodes of the barycentric rational
-    w_j : array (m,) 
+    w_j : array (m,)
       weights of the barycentric rational
-    z_n : array (n,) 
+    z_n : array (n,)
       poles of interest of the barycentric rational (n<=m-1)
 
   Returns
