@@ -1,4 +1,4 @@
-# diffaaable 0.1.0
+# diffaaable 1.0.0
 
 ![](docs/assets/diffaaable.png)
 

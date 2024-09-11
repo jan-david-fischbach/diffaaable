@@ -1,6 +1,6 @@
 """diffaaable - JAX-differentiable AAA algorithm"""
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 __all__ = ["aaa", "adaptive_aaa", "vectorial_aaa", "lorentz_aaa"]
 
