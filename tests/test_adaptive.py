@@ -15,6 +15,9 @@ def f1(a, x):
 def f2(a, x):
     return np.tan(a*x)
 
+def f3(z):
+    return np.where(z.real>0, 1/(z-2+1j), np.nan)
+
 def sort_poles(z_n):
     order = np.argsort(np.abs(z_n-0.5))
     return z_n[order]
@@ -44,6 +47,26 @@ def test_fwd_heat():
 
     for pole in known_poles:
         assert np.min(np.abs(z_n-pole)) < 1e-8
+
+def test_fwd_near():
+    f_a = partial(f2, np.pi)
+    known_poles = np.arange(-4.5, 5.5)
+
+    z_j, f_j, w_j, z_n = adaptive.adaptive_aaa(
+        np.linspace(-1,2,10, dtype=complex)+1j, f_a,
+        domain=[-5-1j, 7+1j], evolutions=10)
+    z_n = sort_poles(z_n)
+    print(f"Poles: {z_n}")
+
+    for pole in known_poles:
+        assert np.min(np.abs(z_n-pole)) < 1e-8
+
+def test_fwd_nan():
+    z_j, f_j, w_j, z_n = adaptive.adaptive_aaa(
+        np.linspace(-1,2,10, dtype=complex), f3,
+        domain=[-5-1j, 7+1j], evolutions=10)
+    z_n = sort_poles(z_n)
+    print(f"Poles: {z_n}")
 
 def test_kwargs():
     f_a = jax.tree_util.Partial(f1, np.pi)
