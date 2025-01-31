@@ -113,6 +113,18 @@ def next_samples_heat(
 
 aaa = jax.tree_util.Partial(aaa)
 
+def mask(z_k, f_k, f_k_dot, cutoff):
+    m = np.abs(f_k)<cutoff    #filter out values, that have diverged too strongly
+    m = np.logical_and(m, ~np.isnan(f_k))   #filter out nans
+    m = np.logical_and(m, ~np.isnan(z_k))   #filter out nans
+
+    if m.ndim == 2:
+      m = np.all(m, axis=1)
+    z_k, f_k, f_k_dot = z_k[m], f_k[m], f_k_dot[m]
+
+    z_k, idx = np.unique(z_k, return_index=True) #filter out duplicates
+    return z_k, f_k[idx], f_k_dot[idx]
+
 def _adaptive_aaa(z_k_0: npt.NDArray,
                  f: callable,
                  evolutions: int = 2,
@@ -162,7 +174,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     f_k_dot = np.zeros_like(f_k)
 
   if cutoff is None:
-    cutoff = 1e10*np.median(np.abs(f_k))
+    cutoff = 1e10*np.nanmedian(np.abs(f_k))
 
   if domain is None:
     center = np.mean(z_k)
@@ -175,15 +187,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
   if prev_z_n is None:
     prev_z_n = np.array([np.inf], dtype=complex)
 
-  def mask(z_k, f_k, f_k_dot):
-    m = np.abs(f_k)<cutoff
-    if m.ndim == 2:
-      m = np.all(m, axis=1) #filter out values, that have diverged too strongly
-    return z_k[m], f_k[m], f_k_dot[m]
-
   key = random.key(0)
   for i in range(evolutions):
-    z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot)
+    z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot, cutoff=cutoff)
     z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol, mmax)
 
     if i==evolutions-1:
@@ -211,7 +217,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     f_k = np.concatenate([f_k, f_k_new])
     f_k_dot = np.concatenate([f_k_dot, f_k_dot_new])
 
-  z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot)
+  z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot, cutoff=cutoff)
 
   if collect_tangents:
     return z_k, f_k, f_k_dot
