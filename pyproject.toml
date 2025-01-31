@@ -4,21 +4,6 @@
 build-backend = "flit_core.buildapi"
 requires = ["flit_core >=3.2,<4"]
 
-[dependency-groups]
-dev = [
-  "tbump>=6.11.0",
-  "pre-commit",
-  "pytest",
-  "pytest-cov",
-  "pytest_regressions"
-]
-docs = [
-  "jupytext",
-  "matplotlib",
-  "jupyter-book",
-  "sphinx_math_dollar"
-]
-
 [lint.pydocstyle]
 convention = "google"
 
@@ -37,9 +22,7 @@ dependencies = [
   "jax",
   "jaxlib",
   "baryrat",
-  "jaxopt",
-  "pytest",
-  "pytest-benchmark"
+  "jaxopt"
 ]
 description = "JAX-differentiable AAA algorithm"
 keywords = ["python"]
@@ -48,6 +31,23 @@ name = "diffaaable"
 readme = "README.md"
 requires-python = ">=3.9"
 version = "1.0.1"
+
+[project.optional-dependencies]
+dev = [
+  "tbump>=6.11.0",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "pytest_regressions",
+  "pytest-benchmark",
+  "matplotlib"
+]
+docs = [
+  "jupytext",
+  "matplotlib",
+  "jupyter-book",
+  "sphinx_math_dollar"
+]
 
 [tool.black]
 exclude = '''  # Specify the files/dirs that should be ignored by the black formatter

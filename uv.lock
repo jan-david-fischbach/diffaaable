@@ -582,16 +582,18 @@ dependencies = [
     { name = "jaxopt" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "numpy", version = "2.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "pytest" },
-    { name = "pytest-benchmark" },
 ]
 
 [package.optional-dependencies]
 dev = [
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "matplotlib", version = "3.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "pytest-benchmark" },
     { name = "pytest-cov" },
     { name = "pytest-regressions" },
+    { name = "tbump" },
 ]
 docs = [
     { name = "jupyter-book" },
@@ -599,11 +601,6 @@ docs = [
     { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "matplotlib", version = "3.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "sphinx-math-dollar" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "tbump" },
 ]
 
 [package.metadata]
@@ -614,19 +611,17 @@ requires-dist = [
     { name = "jaxopt" },
     { name = "jupyter-book", marker = "extra == 'docs'" },
     { name = "jupytext", marker = "extra == 'docs'" },
+    { name = "matplotlib", marker = "extra == 'dev'" },
     { name = "matplotlib", marker = "extra == 'docs'" },
     { name = "numpy" },
     { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "pytest" },
     { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-benchmark" },
+    { name = "pytest-benchmark", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "pytest-regressions", marker = "extra == 'dev'" },
     { name = "sphinx-math-dollar", marker = "extra == 'docs'" },
+    { name = "tbump", marker = "extra == 'dev'", specifier = ">=6.11.0" },
 ]
-
-[package.metadata.requires-dev]
-dev = [{ name = "tbump", specifier = ">=6.11.0" }]
 
 [[package]]
 name = "distlib"
