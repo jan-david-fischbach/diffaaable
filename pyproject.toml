@@ -4,6 +4,21 @@
 build-backend = "flit_core.buildapi"
 requires = ["flit_core >=3.2,<4"]
 
+[dependency-groups]
+dev = [
+  "tbump>=6.11.0",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "pytest_regressions"
+]
+docs = [
+  "jupytext",
+  "matplotlib",
+  "jupyter-book",
+  "sphinx_math_dollar"
+]
+
 [lint.pydocstyle]
 convention = "google"
 
@@ -33,20 +48,6 @@ name = "diffaaable"
 readme = "README.md"
 requires-python = ">=3.9"
 version = "1.0.1"
-
-[project.optional-dependencies]
-dev = [
-  "pre-commit",
-  "pytest",
-  "pytest-cov",
-  "pytest_regressions"
-]
-docs = [
-  "jupytext",
-  "matplotlib",
-  "jupyter-book",
-  "sphinx_math_dollar"
-]
 
 [tool.black]
 exclude = '''  # Specify the files/dirs that should be ignored by the black formatter
