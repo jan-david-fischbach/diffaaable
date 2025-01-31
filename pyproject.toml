@@ -10,7 +10,9 @@ dev = [
   "pre-commit",
   "pytest",
   "pytest-cov",
-  "pytest_regressions"
+  "pytest_regressions",
+  "pytest-benchmark",
+  "matplotlib"
 ]
 docs = [
   "jupytext",
@@ -37,9 +39,7 @@ dependencies = [
   "jax",
   "jaxlib",
   "baryrat",
-  "jaxopt",
-  "pytest",
-  "pytest-benchmark"
+  "jaxopt"
 ]
 description = "JAX-differentiable AAA algorithm"
 keywords = ["python"]
