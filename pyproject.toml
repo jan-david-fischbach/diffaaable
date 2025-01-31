@@ -35,6 +35,7 @@ version = "1.0.1"
 [project.optional-dependencies]
 dev = [
   "tbump>=6.11.0",
+  "towncrier",
   "pre-commit",
   "pytest",
   "pytest-cov",
