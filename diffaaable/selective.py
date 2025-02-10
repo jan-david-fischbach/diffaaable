@@ -65,11 +65,6 @@ def subdomains(domain: Domain, divide_horizontal: bool, center: complex=None):
     return [(subs[1][0], subs[0][1]), (subs[2][0], subs[3][1])]
   return   [(subs[2][0], subs[1][1]), (subs[3][0], subs[0][1])]
 
-
-def cutoff_mask(z_k, f_k, f_k_dot, cutoff):
-  m = np.abs(f_k)<cutoff #filter out values, that have diverged too strongly
-  return z_k[m], f_k[m], f_k_dot[m]
-
 def plot_domain(domain: Domain, size: float=1):
   left_up =    domain[0].real + 1j*domain[1].imag
   right_down = domain[1].real + 1j*domain[0].imag
@@ -82,7 +77,6 @@ def plot_domain(domain: Domain, size: float=1):
 def all_poles_known(poles, prev, tol):
   if prev is None or len(prev)!=len(poles):
     return False
-  #return True
 
   dist = np.abs(poles[:, None] - prev[None, :])
   check = np.all(np.any(dist < tol, axis=1))
@@ -110,12 +104,9 @@ def selective_refinement_aaa(f: callable,
   TODO: allow access to samples slightly outside of domain
   """
 
-  print(f"start domain '{debug_name}', {Dmax=}")
+  # print(f"start domain '{debug_name}', {Dmax=}")
   folder = f"debug_out/{debug_name:0<33}"
   domain_size = np.abs(domain[1]-domain[0])/2
-  size = domain_size/2 # for plotting
-  #plot_rect = plot_domain(domain, size=30)
-  #color = plot_rect[0].get_color()
 
   if cutoff is None:
     cutoff = np.inf
@@ -135,11 +126,13 @@ def selective_refinement_aaa(f: callable,
       z_k = np.append(z_k, z_k_new)
 
       eval_count += len(z_k_new)
-      print(f"new eval: {eval_count}")
+      # print(f"new eval: {eval_count}")
     eval_count -= len(z_k)
     z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(
       z_k, f, f_k_0=f_k, evolutions=N*16, tol=tol_aaa,
-      domain=reduced_domain(domain, 1.07), radius=4*domain_size/(N), #NOTE: actually increased domain :/
+      domain=reduced_domain(domain, 1.07), radius=4*domain_size/(N),
+      # NOTE: reduced domain with a factor larger than 1
+      # actually increases domain size
       return_samples=True, sampling=sampling, cutoff=np.inf
     )
     # TODO pass down samples in buffer zone
@@ -156,18 +149,14 @@ def selective_refinement_aaa(f: callable,
     except onp.linalg.LinAlgError as e:
       z_n = z_j = f_j = w_j = np.empty((0,))
 
-  print(f"domain '{debug_name}' done: {domain} ->  eval: {eval_count}")
+  # print(f"domain '{debug_name}' done: {domain} ->  eval: {eval_count}")
   poles = z_n[domain_mask(domain, z_n)]
 
   if (Dmax == 0 or
     (len(poles)<=max_poles and all_poles_known(poles, suggestions, tol_pol))):
 
-    #plt.scatter(poles.real, poles.imag, color = color, marker="x")#, s=size*3, linewidths=size/2)
-    print("I am done here")
-
     res = residues(z_j, f_j, w_j, poles)
     return poles, res, eval_count
-  #plt.scatter(poles.real, poles.imag, color = color, marker="+", s=0.2, zorder=3)#, s=size, linewidths=size/6)
 
   subs = subdomains(domain, divide_horizontal)
 
@@ -190,8 +179,4 @@ def selective_refinement_aaa(f: callable,
     pol = np.append(pol, p)
     res = np.append(res, r)
     eval_count += e
-  # if len(pol) > 0:
-  #   plt.xlim(domain[0].real, domain[1].real)
-  #   plt.ylim(domain[0].imag, domain[1].imag)
-  #   plt.savefig(f"debug_out/{debug_name:0<33}.png")
   return pol, res, eval_count
