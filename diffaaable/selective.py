@@ -150,7 +150,7 @@ def selective_refinement_aaa(f: callable,
   poles = z_n[domain_mask(domain, z_n)]
 
   if (Dmax == 0 or
-    (len(poles)<=max_poles and all_poles_known(poles, suggestions, tol_pol))):
+    (len(poles)<=max_poles and all_poles_known(poles, suggestions, domain_size*tol_pol))):
 
     res = residues(z_j, f_j, w_j, poles)
     return poles, res, eval_count
