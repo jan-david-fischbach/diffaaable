@@ -113,9 +113,6 @@ def selective_refinement_aaa(f: callable,
 
   eval_count = 0
   if use_adaptive:
-    pathlib.Path(folder).mkdir(parents=True, exist_ok=True)
-    sampling = Partial(next_samples_heat, debug=folder,
-                       stop=stop, resolution=(101, 101), batchsize=batchsize)
     if z_k is None:
       z_k = np.empty((0,), dtype=complex)
       f_k = z_k.copy()
@@ -129,11 +126,11 @@ def selective_refinement_aaa(f: callable,
       # print(f"new eval: {eval_count}")
     eval_count -= len(z_k)
     z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(
-      z_k, f, f_k_0=f_k, evolutions=N*16, tol=tol_aaa,
+      z_k, f, f_k_0=f_k, evolutions=20, tol=tol_aaa,
       domain=reduced_domain(domain, 1.07), radius=4*domain_size/(N),
       # NOTE: reduced domain with a factor larger than 1
       # actually increases domain size
-      return_samples=True, sampling=sampling, cutoff=np.inf
+      return_samples=True, cutoff=np.inf
     )
     # TODO pass down samples in buffer zone
     eval_count += len(z_k)
