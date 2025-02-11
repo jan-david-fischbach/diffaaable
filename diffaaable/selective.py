@@ -149,8 +149,10 @@ def selective_refinement_aaa(f: callable,
   # print(f"domain '{debug_name}' done: {domain} ->  eval: {eval_count}")
   poles = z_n[domain_mask(domain, z_n)]
 
-  if (Dmax == 0 or
-    (len(poles)<=max_poles and all_poles_known(poles, suggestions, domain_size*tol_pol))):
+  if Dmax == 0:
+    return np.array([]), np.array([]), eval_count
+
+  if len(poles)<=max_poles and all_poles_known(poles, suggestions, domain_size*tol_pol):
 
     res = residues(z_j, f_j, w_j, poles)
     return poles, res, eval_count
