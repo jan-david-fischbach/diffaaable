@@ -101,9 +101,7 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
 
 def residues_vec(z_j,f_j,w_j,z_n):
   '''Vectorial residues for given poles via formula for simple poles
-  of quotients of analytic functions. For a barycentric rational of order `m`
-  the
-
+  of quotients of analytic functions.
   '''
 
   C_pol = 1.0 / (z_n[:,None] - z_j[None,:])
