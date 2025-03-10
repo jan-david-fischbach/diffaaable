@@ -3,7 +3,7 @@ import numpy as np
 from baryrat import BarycentricRational
 from diffaaable.core import poles
 
-def tensor_aaa(z_k, F_k, thres_numerical_zero = 1e-13, aaa_tol=1e-9, norm_power=0):
+def tensor_aaa(z_k, F_k, aaa_tol=1e-9, aaa_mmax=100, thres_numerical_zero = 1e-13, norm_power=0):
   total_vec = np.array([np.array(F_ki) for F_ki in F_k]).reshape(len(z_k), -1)
 
   norm = np.max(np.abs(total_vec), axis=0)
@@ -17,7 +17,7 @@ def tensor_aaa(z_k, F_k, thres_numerical_zero = 1e-13, aaa_tol=1e-9, norm_power=
 
   norm_unique = unique/norm_no_zeros #in the following we abbreiate _unique as _u
 
-  z_j, norm_f_j_u, w_j, z_n = vectorial_aaa(z_k, norm_unique, tol=aaa_tol)
+  z_j, norm_f_j_u, w_j, z_n = vectorial_aaa(z_k, norm_unique, tol=aaa_tol, mmax=aaa_mmax)
   f_j_u = norm_f_j_u * norm_no_zeros
   f_j_no_zeros = f_j_u[:, inv_unique_idx]
 

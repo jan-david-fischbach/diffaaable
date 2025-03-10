@@ -116,7 +116,7 @@ aaa = jax.tree_util.Partial(aaa)
 def mask(z_k, f_k, f_k_dot, cutoff):
     def all_f(f):
       # to make sure all f_k (in case of tensor valued functions) behave nice
-      return np.apply_over_axes(np.all, f, np.arange(f.ndim-1)+1)
+      return np.squeeze(np.apply_over_axes(np.all, f, np.arange(f.ndim-1)+1))
     m = all_f(np.abs(f_k)<cutoff)    #filter out values, that have diverged too strongly
     m = np.logical_and(m, all_f(~np.isnan(f_k)))   #filter out nans
     m = np.logical_and(m, ~np.isnan(z_k))   #filter out nans
