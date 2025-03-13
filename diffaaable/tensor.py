@@ -13,12 +13,21 @@ def tensor_aaa(z_k, F_k, aaa_tol=1e-9, aaa_mmax=100, thres_numerical_zero = 1e-1
   total_no_zeros = total_vec[:, ~numerical_zeros]
   norm_no_zeros = norm[~numerical_zeros]
 
-  unique, inv_unique_idx = np.unique(total_no_zeros, axis=1, return_inverse=True)
+  # print(f"{total_vec.shape=}")
+  # print(f"{norm.shape=}")
+  # print(f"{total_no_zeros.shape=}")
+  # print(f"{norm_no_zeros.shape=}")
 
-  norm_unique = unique/norm_no_zeros #in the following we abbreiate _unique as _u
+  unique, unique_idx, inv_unique_idx = np.unique(
+     total_no_zeros, axis=1,
+     return_index=True, return_inverse=True
+  )
+  norm_no_zeros_unique = norm_no_zeros[unique_idx]
+
+  norm_unique = unique/norm_no_zeros_unique #in the following we abbreiate _unique as _u
 
   z_j, norm_f_j_u, w_j, z_n = vectorial_aaa(z_k, norm_unique, tol=aaa_tol, mmax=aaa_mmax)
-  f_j_u = norm_f_j_u * norm_no_zeros
+  f_j_u = norm_f_j_u * norm_no_zeros_unique
   f_j_no_zeros = f_j_u[:, inv_unique_idx]
 
   f_j_vec = np.zeros((len(z_j), *total_vec.shape[1:]), dtype=complex)
