@@ -607,6 +607,12 @@ docs = [
     { name = "sphinx-math-dollar" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "matplotlib", version = "3.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "baryrat" },
@@ -628,6 +634,9 @@ requires-dist = [
     { name = "tbump", marker = "extra == 'dev'", specifier = ">=6.11.0" },
     { name = "towncrier", marker = "extra == 'dev'" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "matplotlib", specifier = ">=3.9.4" }]
 
 [[package]]
 name = "distlib"

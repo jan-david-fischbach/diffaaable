@@ -69,7 +69,7 @@ C = zeros(M,0);
 
 % AAA iteration:
 for m = 1:mmax
-    residual = abs(F-R)
+    residual = abs(F-R);
     [errvec(m),loc] = max(residual);               % Select next support point where error is largest
     if ( errvec(m) <= tol )
         m = m-1;
@@ -77,7 +77,6 @@ for m = 1:mmax
     end
 
     loc = mod(loc,M);
-    loc
     ind(m,:) =  loc + (M*(loc==0):M:(nF-1+(loc==0))*M);  % Get indices of the z_i
     z(m) = Z(ind(m,1));                           % Add interpolation point
     f(m,:) = F(ind(m,:));                         % Add function values
@@ -97,7 +96,6 @@ for m = 1:mmax
     v = SF*C(:,m)-v(:);
     
     %sv = size(v)
-    v
 
     % Update H and S to compensate for the removal of the rows
     %sQ = size(Q)

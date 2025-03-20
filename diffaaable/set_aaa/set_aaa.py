@@ -16,7 +16,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
   """
 
   M = len(z_k)
-  mmax = min(M//2+1, mmax)
+  #mmax = min(M//2+1, mmax)
   N = len(f_k[0])
 
   norm_f = np.max(np.abs(f_k), axis=0)[None, :]
@@ -45,7 +45,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
     # Select next support point where error is largest
     residual = np.abs(f_k-r_k)
 
-    log.debug(f"{residual=}")
+    # log.debug(f"{residual=}")
     
     idx_max_residual = np.argmax(residual)
     err = residual.flat[idx_max_residual]
@@ -58,7 +58,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
     # all indices of the next sample in the flattened f_k array
     next_sample_flat = next_sample + np.arange(0, N*M, M) 
 
-    log.debug(f"{next_sample=}")
+    # log.debug(f"{next_sample=}")
 
     # Book keeping
     index = np.r_[index, next_sample]
@@ -82,7 +82,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
     # log.debug(f"before left scaling {v.shape=}")
     v = left_scaling @ C[:, -1:] - v.flatten("F")[:, None]
     # log.debug(f"after left scaling {v.shape=}")
-    log.debug(f"{v=}")
+    # log.debug(f"{v=}")
 
     q = Q[next_sample_flat, :m]
     
@@ -141,7 +141,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
 
     # Solve small least squares problem with H
     u, s, vh = np.linalg.svd(H[:m+1, :m+1])
-    w_j = vh[-1]
+    w_j = np.conj(vh[-1])
 
     # log.debug(f"{w_j.shape=}")
     # log.debug(f"{f_k.shape=}")
@@ -160,12 +160,11 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
   errs=np.array(errs)[:, None]*norm_f
 
   zero_weight_mask = w_j == 0
-  print(zero_weight_mask)
   z_j = z_j[~zero_weight_mask]
   f_j = f_j[~zero_weight_mask]
   w_j = w_j[~zero_weight_mask]
 
-  log.debug(f"Done with ")
+  log.debug(f"Done with Set AAA")
   return z_j, f_j, w_j
 
 
@@ -178,7 +177,10 @@ if __name__ == "__main__":
 
   logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
   residues = np.array([2, 1j])
-  z_k = np.linspace(-1, 1, 5)
+  #z_k = np.linspace(-1, 1, 5)
+  z_k = np.linspace(-1, 1, 9)
   z_j, f_j, w_j = set_aaa(z_k, f_test(z_k, residues), mmax=5)
 
-  print(len(z_j))
+  from diffaaable.core import poles
+  z_n = poles(z_j, w_j)
+  print(len(z_n))

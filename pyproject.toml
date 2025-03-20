@@ -189,3 +189,8 @@ showcontent = true
 directory = "fixed"
 name = "Fixed"
 showcontent = true
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.9.4",
+]
