@@ -1,4 +1,4 @@
-function [r, pol, res, zer, z, f, w, errvec] = aaa_sv(F, varargin)
+function [r, pol, res, zer, z, f, w, errvec] = set_aaa(F, varargin)
 %AAA_SV - Reworked version of the aaa function from Chebfun (http://www.chebfun.org/),
 % see also: 'N AKATSUKASA , Y., S ÈTE , O. & T REFETHEN , L. N. (2016)
 % The AAA algorithm for rational approximation. Preprint arXiv:1612.00337'
@@ -47,8 +47,12 @@ end
 normF = max(abs(F),[],1);
 F = F./normF;
 
+%sF = size(F)
+
 % Left scaling matrix:
 SF = spdiags(F, 0:-M:-M*(nF-1), M*nF, M);
+
+%sSF = size(SF)
 
 % Initialize values
 F = F(:);
@@ -65,26 +69,43 @@ C = zeros(M,0);
 
 % AAA iteration:
 for m = 1:mmax
-    [errvec(m),loc] = max(abs(F-R));               % Select next support point where error is largest
+    residual = abs(F-R)
+    [errvec(m),loc] = max(residual);               % Select next support point where error is largest
     if ( errvec(m) <= tol )
         m = m-1;
         break
     end
 
     loc = mod(loc,M);
+    loc
     ind(m,:) =  loc + (M*(loc==0):M:(nF-1+(loc==0))*M);  % Get indices of the z_i
     z(m) = Z(ind(m,1));                           % Add interpolation point
     f(m,:) = F(ind(m,:));                         % Add function values
+    %sf = size(f)
+
     C(:,end+1) = 1./(Z - z(m));                   % Get column of the Cauchy matrix.
     C(ind(1:m,1),m) = 0;                          % Set the selected elements to 0
 
-    v = C(:,m)*f(m,:);                            % Compute the next vector of the basis.
+    %sC = size(C)
+
+    v = C(:,m)*f(m,:);  
+    %sLastC = size(C(:,m))
+    %sLastFj = size(f(m, :))
+    %sv = size(v)
+
+    % Compute the next vector of the basis.
     v = SF*C(:,m)-v(:);
+    
+    %sv = size(v)
+    v
 
     % Update H and S to compensate for the removal of the rows
+    %sQ = size(Q)
     q = Q(ind(m,:),1:m-1);
+    %sq = size(q)
     q = q*S(1:m-1,1:m-1);
     ee = eye(m-1,m-1)-q'*q;
+    %ees = size(ee)
     ee(1:size(ee,1)+1:end) = real(diag(ee));
     Si = chol(ee);
     H(1:m-1,1:m-1) = Si*H(1:m-1,1:m-1);
@@ -93,11 +114,19 @@ for m = 1:mmax
     Q(ind(1:m,:),:) = 0;
 
     nv = norm(v);
+
+    %sqv = size(Q'*v)
     H(1:m-1,m) = Q'*v;
     H(1:m-1,m) = S(1:m-1,1:m-1)'*H(1:m-1,m);
     HH = S(1:m-1,1:m-1)*H(1:m-1,m);
+
+    %sQ = size(Q)
+    %sHH = size(HH)
+
     v = v-(Q*HH);
     H(m,m) = norm(v);
+
+    %sv1 = size(v)
     % Reorthoganlization is necessary for higher precision
     it = 0;
     while (it < 3) && (H(m,m) < 1/sqrt(2)*nv)
@@ -109,13 +138,18 @@ for m = 1:mmax
         it = it+1;
     end
     v = v/H(m,m);
+    %sv = size(v)
 
     % Add v
     Q(:,end+1) = v;
 
+    %sQ = size(Q)
+
     % Solve small least squares problem with H
     [~,~,V] = svd(H(1:m,1:m));
     w = V(:,end);
+
+    %sw = size(w)
 
     % Get the rational approximation
     N = C*(w.*f(1:m,:));       % Numerator
@@ -346,7 +380,7 @@ for n = 5:14
     % Sample points:
     % Next line enables us to do pretty well near poles
     Z = linspace(dom(1)+1.37e-8*diff(dom), dom(2)-3.08e-9*diff(dom), 1 + 2^n).';
-    [r, pol, res, zer, zj, fj, wj, errvec] = aaa_sv(F, Z, 'tol', tol, ...
+    [r, pol, res, zer, zj, fj, wj, errvec] = set_aaa(F, Z, 'tol', tol, ...
         'mmax', mmax);
 
     % Test if rational approximant is accurate:
