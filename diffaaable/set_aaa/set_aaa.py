@@ -22,8 +22,14 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
   norm_f = np.max(np.abs(f_k), axis=0)[None, :]
   f_k = f_k / norm_f
 
-  left_scaling = sp.diags_array(
-    f_k.T, offsets=np.arange(0, -M*N, -M), shape=(M*N, M)
+  # log.warning(f"{f_k.T.shape=}")
+  # left_scaling = sp.diags_array(
+  #   f_k.T, offsets=np.arange(0, -M*N, -M), shape=(M*N, M)
+  # )
+  # log.warning(f"Size: {N}")
+
+  left_scaling = sp.spdiags(
+    f_k.T, np.arange(0, -M*N, -M), M*N, M
   )
 
   r_k = np.mean(f_k)
@@ -50,6 +56,8 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
     idx_max_residual = np.argmax(residual)
     err = residual.flat[idx_max_residual]
     errs.append(err)
+
+    log.info(f"Error: {err}")
 
     if err <= tol:
       break
