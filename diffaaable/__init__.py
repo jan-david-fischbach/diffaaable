@@ -8,3 +8,4 @@ from diffaaable.core import aaa
 from diffaaable.adaptive import adaptive_aaa
 from diffaaable.vectorial import vectorial_aaa
 from diffaaable.lorentz import lorentz_aaa
+from diffaaable.tensor import tensor_aaa
