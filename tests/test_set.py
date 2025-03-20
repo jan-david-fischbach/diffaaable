@@ -14,7 +14,7 @@ z_k = np.linspace(-4, 4, 1000) + 0.8j
 
 def test_set_aaa():
   n_poles = 11
-  residues = np.arange(n_poles*5000).reshape(n_poles, -1)
+  residues = np.arange(n_poles*40_000).reshape(n_poles, -1)
   f_k = f_test(z_k, residues, n_poles)
 
   print(f_k.shape)
@@ -33,5 +33,5 @@ def test_set_aaa():
 if __name__ == "__main__":
   lmax = np.arange(1, 10)
   N = (2 * lmax * (lmax + 2))**2
-  print(list(zip(lmax, N)))
+  print(np.stack([lmax, N]))
   test_set_aaa()
