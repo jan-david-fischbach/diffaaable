@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 np.set_printoptions(edgeitems=30, linewidth=100000, 
     formatter=dict(float=lambda x: "%.3g" % x))
 
-def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
+def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
   """Implementation of the vector valued AAA algorithm avoiding repeated large SVDs
 
   Args:
@@ -121,7 +121,6 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
 
     HH = S[:m, :m]@H[:m, m:m+1]
 
-
     # log.debug(f"before QHH: {v.shape=}")
     # log.debug(f"before QHH: {Q.shape=}")
     # log.debug(f"before QHH: {HH.shape=}")
@@ -132,13 +131,17 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100):
 
     # Reorthoganlization is necessary for higher precision
     it = 0
-    while it<3 and H[m,m] < 1/np.sqrt(2)*nv:
+    while it<reortho_iterations and H[m,m] < 1/np.sqrt(2)*nv / 10:
       h_new = np.conj(S[:m, :m].T)@(np.conj(Q.T)@v)
       v = v - Q@(S[:m, :m]@h_new)
       H[:m, m] = H[:m, m] + h_new
       nv = H[m,m]
       H[m,m] = np.linalg.norm(v)
       it += 1
+
+    if it==reortho_iterations:
+      log.warning("Hit maximum reorthogonalization iterations")
+
     v = v/H[m,m]
 
     # add v
