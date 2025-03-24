@@ -21,19 +21,32 @@ def f_test(z, residues, n_poles):
   return np.sum(residues.T[None, :, :]/(z[:, None, None]-poles[None, None, :]), axis=-1)
 
 def f_test_harder(z, residues, n_poles):
-  poles = (0.1)**np.arange(n_poles)
+  poles = (1+0.1j)**np.arange(n_poles)
   return np.sum(residues.T[None, :, :]/(z[:, None, None]-poles[None, None, :]), axis=-1)
 
 
-z_k = np.linspace(-4, 4, 15) + 0.8j
-
 def test_set_aaa():
+  z_k = np.linspace(-4, 4, 15) + 0.8j
   n_poles = 3
   residues = np.arange(n_poles*2).reshape(n_poles, -1)
   f_k = f_test_harder(z_k, residues, n_poles)
 
-  print(f_k)
-  z_j, f_j, w_j = set_aaa(z_k, f_k, tol=1e-13, reortho_iterations=3)
+  z_j, f_j, w_j = set_aaa(z_k, f_k, tol=1e-13)
+
+  r = BarycentricRational(z_j, f_j[:,0], w_j)
+  pol, res_found = r.polres()
+  print(f"residues: {res_found}")
+  sorter = np.argsort(-np.abs(pol))
+  sorted_poles = pol[sorter]
+  print(f"{sorted_poles=}")
+
+def test_set_aaa_more_poles():
+  z_k = np.linspace(-4, 4, 1001) + 0.8j
+  n_poles = 25
+  residues = np.arange(n_poles*6000).reshape(n_poles, -1)
+  f_k = f_test_harder(z_k, residues, n_poles)
+
+  z_j, f_j, w_j = set_aaa(z_k, f_k, tol=1e-13)
 
   r = BarycentricRational(z_j, f_j[:,0], w_j)
   pol, res_found = r.polres()
@@ -48,3 +61,5 @@ if __name__ == "__main__":
   # print(np.stack([lmax, N]))
 
   test_set_aaa()
+
+  test_set_aaa_more_poles()

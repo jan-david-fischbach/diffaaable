@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 np.set_printoptions(edgeitems=30, linewidth=100000, 
     precision=14)
 
-def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
+def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
   """Implementation of the vector valued AAA algorithm avoiding repeated large SVDs
 
   Args:
@@ -83,13 +83,11 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
     np.fill_diagonal(ee, np.real(np.diag(ee)))
 
     # print(f"ee: {ee}")
-    sU, sS, sV = np.linalg.svd(ee)
-    if len(sS):
-      print(f"smallest singular value: {np.min(sS)}")
-    else:
-      print("smallest singular value: []")
-
-
+    # sU, sS, sV = np.linalg.svd(ee)
+    # if len(sS):
+    #   print(f"smallest singular value: {np.min(sS)}")
+    # else:
+    #   print("smallest singular value: []")
 
     Si = np.linalg.cholesky(ee, upper=True)
     #Si = scipy.linalg.cholesky(ee, lower=False)
@@ -115,7 +113,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
     while it<reortho_iterations and H[m,m] < 1/np.sqrt(2)*nv:
       h_new = np.conj(S[:m, :m].T)@(np.conj(Q.T)@v)
       v = v - Q@(S[:m, :m]@h_new)
-      log.debug(f"{h_new.shape=}")
+      # log.debug(f"{h_new.shape=}")
       H[:m, m] = H[:m, m] + np.squeeze(h_new)
       nv = H[m,m]
       H[m,m] = np.linalg.norm(v)
