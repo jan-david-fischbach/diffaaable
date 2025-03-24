@@ -6,7 +6,7 @@ from  diffaaable.core import poles
 
 log = logging.getLogger(__name__)
 
-np.set_printoptions(edgeitems=30, linewidth=100000, 
+np.set_printoptions(edgeitems=30, linewidth=100000,
     precision=14)
 
 def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
@@ -21,7 +21,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
   mmax = min(M-1, mmax)
   N = len(f_k[0])
 
-  norm_f = np.max(np.abs(f_k), axis=0)[None, :]
+  norm_f = 1 #np.max(np.abs(f_k), axis=0)[None, :]
   f_k = f_k / norm_f
 
   left_scaling = sp.spdiags(
@@ -45,7 +45,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
 
     # Select next support point where error is largest
     residual = np.abs(f_k-r_k)
-    
+
     idx_max_residual = np.argmax(residual)
     err = residual.flat[idx_max_residual]
     errs.append(err)
@@ -57,7 +57,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
 
     next_sample = np.argmax(np.max(residual, axis=1))
     # all indices of the next sample in the flattened f_k array
-    next_sample_flat = next_sample + np.arange(0, N*M, M) 
+    next_sample_flat = next_sample + np.arange(0, N*M, M)
 
     log.debug(f"next_sample {int(next_sample)}")
 
