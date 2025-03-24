@@ -22,7 +22,7 @@ def check_inputs(z_k, f_k):
   return z_k, f_k, M, V
 
 def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
-  """Find a rational approximation to $\mathbf f(z)$ over the points $z_k$ using
+  r"""Find a rational approximation to $\mathbf f(z)$ over the points $z_k$ using
   a modified AAA algorithm, as presented in [^4]. Importantly the weights and
   thus also the poles are shared between all entries of $\mathbf f(z)$.
 
@@ -101,9 +101,7 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
 
 def residues_vec(z_j,f_j,w_j,z_n):
   '''Vectorial residues for given poles via formula for simple poles
-  of quotients of analytic functions. For a barycentric rational of order `m`
-  the
-
+  of quotients of analytic functions.
   '''
 
   C_pol = 1.0 / (z_n[:,None] - z_j[None,:])

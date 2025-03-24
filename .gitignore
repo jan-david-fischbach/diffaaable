@@ -157,3 +157,4 @@ cython_debug/
 
 debug_out*
 *.ipynb
+*.asv

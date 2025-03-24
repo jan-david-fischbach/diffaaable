@@ -22,7 +22,8 @@ dependencies = [
   "jax",
   "jaxlib",
   "baryrat",
-  "jaxopt"
+  "jaxopt",
+  "pandas>=2.2.3",
 ]
 description = "JAX-differentiable AAA algorithm"
 keywords = ["python"]
@@ -188,3 +189,9 @@ showcontent = true
 directory = "fixed"
 name = "Fixed"
 showcontent = true
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.9.4",
+    "pytest>=8.3.5",
+]
