@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse as sp
 import logging
 import scipy
+from  diffaaable.core import poles
 
 log = logging.getLogger(__name__)
 
@@ -152,7 +153,9 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
   w_j = w_j[~zero_weight_mask]
 
   log.debug(f"Done with Set AAA")
-  return z_j, f_j, w_j
+
+  z_n = poles(z_j, w_j)
+  return z_j, f_j, w_j, z_n
 
 
 ################### Testing #################################

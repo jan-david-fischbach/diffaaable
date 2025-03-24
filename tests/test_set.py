@@ -31,7 +31,7 @@ def test_set_aaa():
   residues = np.arange(n_poles*2).reshape(n_poles, -1)
   f_k = f_test_harder(z_k, residues, n_poles)
 
-  z_j, f_j, w_j = set_aaa(z_k, f_k, tol=1e-13)
+  z_j, f_j, w_j, _ = set_aaa(z_k, f_k, tol=1e-13)
 
   r = BarycentricRational(z_j, f_j[:,0], w_j)
   pol, res_found = r.polres()
@@ -46,7 +46,7 @@ def test_set_aaa_more_poles():
   residues = np.arange(n_poles*6000).reshape(n_poles, -1)
   f_k = f_test_harder(z_k, residues, n_poles)
 
-  z_j, f_j, w_j = set_aaa(z_k, f_k, tol=1e-13)
+  z_j, f_j, w_j, _ = set_aaa(z_k, f_k, tol=1e-13)
 
   r = BarycentricRational(z_j, f_j[:,0], w_j)
   pol, res_found = r.polres()
