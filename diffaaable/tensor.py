@@ -26,7 +26,7 @@ def tensor_aaa(z_k, F_k, aaa_tol=1e-9, aaa_mmax=100, thres_numerical_zero = 1e-1
 
   norm_unique = unique/norm_no_zeros_unique #in the following we abbreiate _unique as _u
 
-  z_j, norm_f_j_u, w_j, z_n = set_aaa(z_k, norm_unique, tol=aaa_tol, mmax=aaa_mmax)
+  z_j, norm_f_j_u, w_j, z_n = set_aaa(z_k, norm_unique, tol=aaa_tol, mmax=aaa_mmax, normalize=False)
   f_j_u = norm_f_j_u * norm_no_zeros_unique
   f_j_no_zeros = f_j_u[:, inv_unique_idx]
 
