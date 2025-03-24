@@ -75,56 +75,47 @@ for m = 1:mmax
         m = m-1;
         break
     end
-
+    
+    loc_py = mod(loc-1,M)
     loc = mod(loc,M);
+
     ind(m,:) =  loc + (M*(loc==0):M:(nF-1+(loc==0))*M);  % Get indices of the z_i
     z(m) = Z(ind(m,1));                           % Add interpolation point
     f(m,:) = F(ind(m,:));                         % Add function values
-    %sf = size(f)
 
     C(:,end+1) = 1./(Z - z(m));                   % Get column of the Cauchy matrix.
     C(ind(1:m,1),m) = 0;                          % Set the selected elements to 0
 
-    %sC = size(C)
-
     v = C(:,m)*f(m,:);  
-    %sLastC = size(C(:,m))
-    %sLastFj = size(f(m, :))
-    %sv = size(v)
 
     % Compute the next vector of the basis.
     v = SF*C(:,m)-v(:);
-    
-    %sv = size(v)
 
     % Update H and S to compensate for the removal of the rows
-    %sQ = size(Q)
     q = Q(ind(m,:),1:m-1);
-    %sq = size(q)
     q = q*S(1:m-1,1:m-1);
     ee = eye(m-1,m-1)-q'*q;
-    %ees = size(ee)
     ee(1:size(ee,1)+1:end) = real(diag(ee));
+    
+    %ee
+    [sU, sS, sV] = svd(ee);
+    min_sing = min(diag(sS))
+
     Si = chol(ee);
     H(1:m-1,1:m-1) = Si*H(1:m-1,1:m-1);
     S(1:m-1,1:m-1) = S(1:m-1,1:m-1)/Si;
     S(m,m) = 1;
     Q(ind(1:m,:),:) = 0;
 
-    nv = norm(v);
+     = norm(v);
 
-    %sqv = size(Q'*v)
     H(1:m-1,m) = Q'*v;
     H(1:m-1,m) = S(1:m-1,1:m-1)'*H(1:m-1,m);
     HH = S(1:m-1,1:m-1)*H(1:m-1,m);
 
-    %sQ = size(Q)
-    %sHH = size(HH)
-
     v = v-(Q*HH);
     H(m,m) = norm(v);
 
-    %sv1 = size(v)
     % Reorthoganlization is necessary for higher precision
     it = 0;
     while (it < 3) && (H(m,m) < 1/sqrt(2)*nv)
@@ -136,18 +127,13 @@ for m = 1:mmax
         it = it+1;
     end
     v = v/H(m,m);
-    %sv = size(v)
 
     % Add v
     Q(:,end+1) = v;
 
-    %sQ = size(Q)
-
     % Solve small least squares problem with H
     [~,~,V] = svd(H(1:m,1:m));
     w = V(:,end);
-
-    %sw = size(w)
 
     % Get the rational approximation
     N = C*(w.*f(1:m,:));       % Numerator
@@ -159,7 +145,7 @@ end
 f = f(1:m,:).*normF;
 w = w(1:m);
 z = z(1:m);
-errvec = errvec(1:m).*normF;
+%errvec = errvec(1:m).*normF;
 
 % Note: When M == 2, one weight is zero and r is constant.
 % To obtain a good approximation, interpolate in both sample points.
@@ -184,8 +170,6 @@ r = @(zz) reval(zz, z, f, w);
 [pol, res, zer] = prz(r, z, f, w);
 
 end % of AAA()
-
-
 
 %% parse Inputs:
 

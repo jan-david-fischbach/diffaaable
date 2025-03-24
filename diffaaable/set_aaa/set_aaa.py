@@ -1,11 +1,12 @@
 import numpy as np
 import scipy.sparse as sp
 import logging
+import scipy
 
 log = logging.getLogger(__name__)
 
 np.set_printoptions(edgeitems=30, linewidth=100000, 
-    formatter=dict(float=lambda x: "%.3g" % x))
+    precision=14)
 
 def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
   """Implementation of the vector valued AAA algorithm avoiding repeated large SVDs
@@ -21,12 +22,6 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
 
   norm_f = np.max(np.abs(f_k), axis=0)[None, :]
   f_k = f_k / norm_f
-
-  # log.warning(f"{f_k.T.shape=}")
-  # left_scaling = sp.diags_array(
-  #   f_k.T, offsets=np.arange(0, -M*N, -M), shape=(M*N, M)
-  # )
-  # log.warning(f"Size: {N}")
 
   left_scaling = sp.spdiags(
     f_k.T, np.arange(0, -M*N, -M), M*N, M
@@ -46,12 +41,9 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
   H = np.zeros((mmax+1, mmax+1), dtype=complex)
 
   for m in range(mmax):
-    # log.debug(f"Next Iteration {m=}")
 
     # Select next support point where error is largest
     residual = np.abs(f_k-r_k)
-
-    # log.debug(f"{residual=}")
     
     idx_max_residual = np.argmax(residual)
     err = residual.flat[idx_max_residual]
@@ -66,7 +58,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
     # all indices of the next sample in the flattened f_k array
     next_sample_flat = next_sample + np.arange(0, N*M, M) 
 
-    # log.debug(f"{next_sample=}")
+    log.debug(f"next_sample {int(next_sample)}")
 
     # Book keeping
     index = np.r_[index, next_sample]
@@ -79,62 +71,52 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
     C = np.c_[C, addC]
     C[index, m] = 0
 
-    # log.debug(f"Next Sample selected: {next_sample}")
-    # log.debug(f"{z_j.shape=}")
-    # log.debug(f"{f_j.shape=}")
-    # log.debug(f"{C.shape=}")
-
     # "Compute the next vector of the basis."
-
     v = C[:, -1:] @ f_j[-1:]
-    # log.debug(f"before left scaling {v.shape=}")
     v = left_scaling @ C[:, -1:] - v.flatten("F")[:, None]
-    # log.debug(f"after left scaling {v.shape=}")
-    # log.debug(f"{v=}")
 
     q = Q[next_sample_flat, :m]
-    
-    # log.debug(f"{q.shape=}")
 
     q = q@S[:m, :m]
 
     ee = np.eye(m, m) - np.conj(q.T) @ q
     np.fill_diagonal(ee, np.real(np.diag(ee)))
 
-    Si = np.linalg.cholesky(ee, upper=True)
+    # print(f"ee: {ee}")
+    sU, sS, sV = np.linalg.svd(ee)
+    if len(sS):
+      print(f"smallest singular value: {np.min(sS)}")
+    else:
+      print("smallest singular value: []")
 
-    # log.debug(f"{Si.shape=}")
-    # log.debug(f"{S.shape=}")
-    # log.debug(f"{H[:m, :m].shape=}")
+
+
+    Si = np.linalg.cholesky(ee, upper=True)
+    #Si = scipy.linalg.cholesky(ee, lower=False)
 
     H[:m, :m] = Si@H[:m, :m]
-    S[:m, :m] = S[:m, :m]@np.linalg.inv(Si)
+    S[:m, :m] = scipy.linalg.solve(Si.T, S[:m, :m].T).T
     S[m, m] = 1
     Q[index_flat, :] = 0
 
-
     Qv = np.conj(Q.T) @ v
-    # log.debug(f"{Qv.shape=}")
 
     H[:m, m] = np.squeeze(Qv)
     H[:m, m] = np.conj(S[:m, :m].T) @ H[:m, m]
 
     HH = S[:m, :m]@H[:m, m:m+1]
 
-    # log.debug(f"before QHH: {v.shape=}")
-    # log.debug(f"before QHH: {Q.shape=}")
-    # log.debug(f"before QHH: {HH.shape=}")
+    nv = np.linalg.norm(v)
     v = v - (Q@HH)
-    H[m,m] = nv = np.linalg.norm(v)
-
-    # log.debug(f"before reortho: {v.shape=}")
+    H[m,m] = np.linalg.norm(v)
 
     # Reorthoganlization is necessary for higher precision
     it = 0
-    while it<reortho_iterations and H[m,m] < 1/np.sqrt(2)*nv / 10:
+    while it<reortho_iterations and H[m,m] < 1/np.sqrt(2)*nv:
       h_new = np.conj(S[:m, :m].T)@(np.conj(Q.T)@v)
       v = v - Q@(S[:m, :m]@h_new)
-      H[:m, m] = H[:m, m] + h_new
+      log.debug(f"{h_new.shape=}")
+      H[:m, m] = H[:m, m] + np.squeeze(h_new)
       nv = H[m,m]
       H[m,m] = np.linalg.norm(v)
       it += 1
@@ -143,27 +125,23 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=10):
       log.warning("Hit maximum reorthogonalization iterations")
 
     v = v/H[m,m]
+    #log.debug(f"{v=}")
 
     # add v
-    # log.debug(f"before appending v {Q.shape=}")
-    # log.debug(f"{v.shape=}")
     Q = np.c_[Q, v]
-    # log.debug(f"after appending v {Q.shape=}")
 
     # Solve small least squares problem with H
     u, s, vh = np.linalg.svd(H[:m+1, :m+1])
     w_j = np.conj(vh[-1])
 
-    # log.debug(f"{w_j.shape=}")
-    # log.debug(f"{f_k.shape=}")
-
-    # log.debug(f"{C.shape=}")
-
     # Get the rational approximation
     Nom = C@(w_j[:, None]*f_j)
     Den = C@(w_j[:, None]*np.ones_like(f_j))
-    r_k = Nom/Den
+    with np.errstate(invalid='ignore'):
+      r_k = Nom/Den
     r_k[index] = f_j
+
+
 
 
   f_j *= norm_f
