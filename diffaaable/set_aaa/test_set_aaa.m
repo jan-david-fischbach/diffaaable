@@ -4,7 +4,7 @@ clc
 function result = f_test_harder(z, residues, n_poles)
     poles = (0.1) .^ (0:n_poles-1);
     disp(['poles = ', mat2str(poles)]);
-    
+
     % Compute the summation
     denom = z(:) - reshape(poles, [1, 1, n_poles]);
 
@@ -18,7 +18,7 @@ n_poles = 3;
 residues = reshape(0:n_poles*2-1, [], n_poles);
 f_k = f_test_harder(z_k, residues, n_poles);
 
-format longE 
+format longE
 
 [r, pol, res, zer, z, f, w, errs] = set_aaa(f_k, z_k);
 

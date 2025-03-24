@@ -75,7 +75,7 @@ for m = 1:mmax
         m = m-1;
         break
     end
-    
+
     loc_py = mod(loc-1,M)
     loc = mod(loc,M);
 
@@ -86,7 +86,7 @@ for m = 1:mmax
     C(:,end+1) = 1./(Z - z(m));                   % Get column of the Cauchy matrix.
     C(ind(1:m,1),m) = 0;                          % Set the selected elements to 0
 
-    v = C(:,m)*f(m,:);  
+    v = C(:,m)*f(m,:);
 
     % Compute the next vector of the basis.
     v = SF*C(:,m)-v(:);
@@ -96,7 +96,7 @@ for m = 1:mmax
     q = q*S(1:m-1,1:m-1);
     ee = eye(m-1,m-1)-q'*q;
     ee(1:size(ee,1)+1:end) = real(diag(ee));
-    
+
     %ee
     [sU, sS, sV] = svd(ee);
     min_sing = min(diag(sS))
