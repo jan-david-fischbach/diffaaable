@@ -18,7 +18,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
   """
 
   M = len(z_k)
-  mmax = min(M//2+1, mmax)
+  mmax = min(M-1, mmax)
   N = len(f_k[0])
 
   norm_f = np.max(np.abs(f_k), axis=0)[None, :]
