@@ -625,7 +625,7 @@ requires-dist = [
     { name = "jupytext", marker = "extra == 'docs'" },
     { name = "matplotlib", marker = "extra == 'dev'" },
     { name = "matplotlib", marker = "extra == 'docs'" },
-    { name = "numpy" },
+    { name = "numpy", specifier = ">2" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pytest", marker = "extra == 'dev'" },
