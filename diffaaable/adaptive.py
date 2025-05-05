@@ -1,3 +1,4 @@
+import functools
 from typing import Union
 import jax.numpy as np
 import numpy.typing as npt
@@ -8,7 +9,7 @@ import matplotlib.pyplot as plt
 from functools import partial
 Domain = tuple[complex, complex]
 
-def top_right(a: npt.NDArray[complex], b: npt.NDArray[complex]):
+def top_right(a: npt.NDArray, b: npt.NDArray):
   return np.logical_and(a.imag>=b.imag, a.real>=b.real)
 
 def domain_mask(domain: Domain, z_n):
@@ -111,7 +112,7 @@ def next_samples_heat(
 
   return add_samples
 
-aaa = jax.tree_util.Partial(aaa)
+vanilla_aaa = jax.tree_util.Partial(aaa)
 
 def mask(z_k, f_k, f_k_dot, cutoff):
     def all_f(f):
@@ -153,6 +154,11 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     Tangent of `f`. If provided JVPs of `f` will be collected throughout the
     iterations. For use in custom_jvp
   """
+  if sampling is None:
+    sampling = next_samples
+
+  if aaa is None:
+    aaa = vanilla_aaa
 
   if sampling == "heat":
     sampling = next_samples_heat
@@ -238,16 +244,18 @@ def adaptive_aaa(z_k_0: npt.NDArray,
                  radius: float = None,
                  domain: Domain = None,
                  f_k_0: npt.NDArray = None,
-                 sampling: callable = next_samples,
+                 sampling: callable = None,
                  prev_z_n: npt.NDArray = None,
                  return_samples: bool = False,
-                 aaa: callable = aaa):
+                 aaa: callable = None):
   """ An 2x adaptive Antoulas–Anderson algorithm for rational approximation of
   meromorphic functions that are costly to evaluate.
 
   The algorithm iteratively places additional sample points close to estimated
   positions of poles identified during the past iteration. By this refinement
-  scheme the number of function evaluations can be reduced.
+  scheme the number of function evaluations can be reduced. A more detailed
+  description of the iterative sample refinement (ISR) algorithm is provided
+  in (https://doi.org/10.1002/adts.202400989).
 
   It is JAX differentiable wrt. the approximated function `f`, via its other
   arguments besides `z`. `f` should be provided as a `jax.tree_util.Partial`
@@ -270,13 +278,36 @@ def adaptive_aaa(z_k_0: npt.NDArray,
   tol: float
       Tolerance used in AAA (see `diffaaable.aaa`)
   radius: float
-      Distance from the assumed poles for nex samples
+      Distance from the assumed poles for next samples
   domain: tuple[complex, complex]
       Tuple of min (lower left) and max (upper right) values defining a
       rectangle in the complex plane. Assumed poles outside of the domain
       will not receive refinement.
   f_k_0:
       Allows user to provide f evaluated at z_k_0
+  sampling: callable
+      strategy to determine the next sample points. The function should
+      accept the following arguments:
+        - z_n: np.ndarray
+            estimated poles
+        - prev_z_n: np.ndarray
+            previous estimated poles
+        - samples: np.ndarray
+            current sample points
+        - domain: Domain
+            domian in wich to refine poles
+        - radius: float
+            distance from the assumed poles for next samples
+        - randkey: jax.random.PRNGKey
+            random key for sampling
+  prev_z_n: np.ndarray
+      the previous poles that will be passed to the first evaluation of the sampling strategy
+  return_samples: bool
+      If True, the function returns the samples used for the AAA approximation
+      and the function evaluations at these points at the 4t and 5th position.
+  aaa: callable
+      The AAA variant to be used. By default `diffaaable.aaa` is used.
+      If you want to use the tensor AAA, you can pass `diffaaable.tensor.tensor_aaa`.
 
 
   Returns
@@ -289,6 +320,12 @@ def adaptive_aaa(z_k_0: npt.NDArray,
       Weights of Barycentric Approximation
   z_n: np.array
       Poles of Barycentric Approximation
+
+  z_k_final: np.array
+      all sample points used for the AAA approximation. Only returned if
+      `return_samples` is True.
+  f_k_final: np.array
+      `f(z_k_final)` Only returned if `return_samples` is True.
   """
   return _adaptive_aaa(
     z_k_0=z_k_0, f=f, evolutions=evolutions, cutoff=cutoff, tol=tol, mmax=mmax,

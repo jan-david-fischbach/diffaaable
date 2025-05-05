@@ -83,7 +83,7 @@ def all_poles_known(poles, prev, tol):
   return check
 
 
-def selective_refinement_aaa(f: callable,
+def selective_subdivision_aaa(f: callable,
                 domain: Domain,
                 N: int = 36,
                 max_poles: int = 400,
