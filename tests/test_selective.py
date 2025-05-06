@@ -26,6 +26,28 @@ def poles_f3(N=70):
     p2 = 1.5*np.exp(2j*np.pi*np.linspace(0,1,N, endpoint=False))
     return np.concat([p1, p2])
 
+TREAMS_FOUND = False
+try:
+    import treams
+    TREAMS_FOUND = True
+except ModuleNotFoundError:
+    print("treams not found, skipping test")
+
+if TREAMS_FOUND:
+    def f_mie(z):
+        mie = []
+        for x in z:
+            mie.append(treams.coeffs.mie(1, [x], [4,1], [1,1], [0,0]))
+        mie = np.array(mie)
+        return mie[:,0,0]
+
+    def test_mie():
+        poles, residues, evals = selective.selective_subdivision_aaa(f_mie, (0.2-0.5j, 82+0.1j), debug_plot_domains=True, max_poles=60, tol_aaa=1e-10, N=200, evolutions_adaptive=10)
+        plt.scatter(poles.real, poles.imag, marker=".")
+        plt.savefig("debug_out/selective_mie.pdf")
+        plt.close()
+
+
 @pytest.mark.parametrize("f", [f2, f3])
 @pytest.mark.parametrize("N", [5, 10, 30, 60])
 def test_fwd(f, N):
