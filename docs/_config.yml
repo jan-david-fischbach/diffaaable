@@ -39,7 +39,7 @@ launch_buttons:
 sphinx:
   extra_extensions:
     - "sphinx.ext.autodoc"
-    #- "sphinx.ext.autodoc.typehints"
+    - "sphinx.ext.autodoc.typehints"
     - "sphinx.ext.autosummary"
     - "sphinx.ext.napoleon"
     - "sphinx.ext.mathjax"
@@ -53,6 +53,7 @@ sphinx:
         .py:
             - jupytext.reads
             - fmt: py
+    autodoc_typehints: description
 
 parse:
   myst_enable_extensions:  # default extensions to enable in the myst parser. See https://myst-parser.readthedocs.io/en/latest/using/syntax-optional.html

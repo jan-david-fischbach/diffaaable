@@ -30,7 +30,7 @@ dependencies = [
   "jaxlib",
   "baryrat",
   "jaxopt",
-  "pandas>=2.2.3",
+  "pandas>=2.2.3"
 ]
 description = "JAX-differentiable AAA algorithm"
 keywords = ["python"]

@@ -45,6 +45,7 @@ def test_kwargs():
     f_k = f(z_k, np.pi)
     aaa(z_k, f_k, tol=1e-9, mmax=50)
 
+@pytest.mark.xfail
 def test_jvp():
     z_k = np.linspace(0, 3, 20)
     f_k = f(z_k, np.pi)

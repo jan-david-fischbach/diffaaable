@@ -28,6 +28,6 @@ When using this software package for scientific work please cite the associated 
 +++
 
 [^1]: https://arxiv.org/pdf/2403.19404
-[^2]: "A framework to compute resonances arising from multiple scattering", https://arxiv.org/abs/2409.05563
+[^2]: "A framework to compute resonances arising from multiple scattering", https://doi.org/10.1002/adts.202400989
 [^3]: https://doi.org/10.1093/imanum/draa098
 [^4]: https://doi.org/10.48550/arXiv.2405.19582

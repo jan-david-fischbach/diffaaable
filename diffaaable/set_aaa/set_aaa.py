@@ -2,14 +2,14 @@ import numpy as np
 import scipy.sparse as sp
 import logging
 import scipy
-from  diffaaable.core import poles
+from  diffaaable.util import poles
 
 log = logging.getLogger(__name__)
 
 np.set_printoptions(edgeitems=30, linewidth=100000,
     precision=14)
 
-def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
+def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True):
   """Implementation of the vector valued AAA algorithm avoiding repeated large SVDs
 
   Args:
@@ -18,10 +18,10 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3):
   """
 
   M = len(z_k)
-  #mmax = min(M//2+1, mmax)
+  mmax = min(M-1, mmax)
   N = len(f_k[0])
 
-  norm_f = np.max(np.abs(f_k), axis=0)[None, :]
+  norm_f = np.max(np.abs(f_k), axis=0)[None, :] if normalize else 1
   f_k = f_k / norm_f
 
   left_scaling = sp.spdiags(
