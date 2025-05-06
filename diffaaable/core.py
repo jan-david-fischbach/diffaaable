@@ -5,8 +5,11 @@ import numpy.typing as npt
 import jax
 import numpy as np
 from baryrat import aaa as oaaa # ordinary aaa
+from .tensor import tensor_aaa
 import functools
-import scipy.linalg
+from .util import poles
+
+USE_SETAAA = False
 
 @functools.wraps(oaaa)
 @jax.custom_jvp
@@ -14,17 +17,22 @@ def aaa(z_k: npt.NDArray, f_k: npt.NDArray, tol: float=1e-13, mmax: int=100):
   """
   Wraped aaa to enable JAX based autodiff.
   """
-  r = oaaa(z_k, f_k, tol=tol, mmax=mmax)
-  z_j = r.nodes
-  f_j = r.values
-  w_j = r.weights
+  if USE_SETAAA:
+    print("Using set_aaa")
+    z_j, f_j, w_j, z_n = tensor_aaa(z_k, f_k[:, None], tol_aaa=tol, mmax_aaa=mmax)
+    f_j = f_j[:, 0]
+  else:
+    r = oaaa(z_k, f_k, tol=tol, mmax=mmax)
+    z_j = r.nodes
+    f_j = r.values
+    w_j = r.weights
 
-  mask = w_j!=0
-  z_j = z_j[mask]
-  f_j = f_j[mask]
-  w_j = w_j[mask]
+    mask = w_j!=0
+    z_j = z_j[mask]
+    f_j = f_j[mask]
+    w_j = w_j[mask]
 
-  z_n = poles(z_j, w_j)
+    z_n = poles(z_j, w_j)
 
   z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
 
@@ -166,59 +174,3 @@ def aaa_jvp(primals, tangents):
   tangent_out = z_j_dot, f_j_dot, w_j_dot, z_n_dot
 
   return primal_out, tangent_out
-
-def poles(z_j,w_j):
-  """
-  The poles of a barycentric rational with given nodes and weights.
-  Poles lifted by zeros of the nominator are included.
-  Thus the values $f_j$ do not contribute and don't need to be provided
-  The implementation was modified from `baryrat` to support JAX AD.
-
-  Parameters
-  ----------
-    z_j : array (m,)
-      nodes of the barycentric rational
-    w_j : array (m,)
-      weights of the barycentric rational
-
-  Returns
-  -------
-    z_n : array (m-1,)
-      poles of the barycentric rational (more strictly zeros of the denominator)
-  """
-  f_j = np.ones_like(z_j)
-
-  B = np.eye(len(w_j) + 1)
-  B[0,0] = 0
-  E = np.block([[0, w_j],
-                [f_j[:,None], np.diag(z_j)]])
-  evals = scipy.linalg.eigvals(E, B)
-  return evals[np.isfinite(evals)]
-
-def residues(z_j,f_j,w_j,z_n):
-  '''
-  Residues for given poles via formula for simple poles
-  of quotients of analytic functions.
-  The implementation was modified from `baryrat` to support JAX AD.
-
-  Parameters
-  ----------
-    z_j : array (m,)
-      nodes of the barycentric rational
-    w_j : array (m,)
-      weights of the barycentric rational
-    z_n : array (n,)
-      poles of interest of the barycentric rational (n<=m-1)
-
-  Returns
-  -------
-    r_n : array (n,)
-      residues of poles `z_n`
-  '''
-
-  C_pol = 1.0 / (z_n[:,None] - z_j[None,:])
-  N_pol = C_pol.dot(f_j*w_j)
-  Ddiff_pol = (-C_pol**2).dot(w_j)
-  res = N_pol / Ddiff_pol
-
-  return jnp.nan_to_num(res)

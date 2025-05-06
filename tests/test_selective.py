@@ -26,26 +26,21 @@ def poles_f3(N=70):
     p2 = 1.5*np.exp(2j*np.pi*np.linspace(0,1,N, endpoint=False))
     return np.concat([p1, p2])
 
-def test_fwd():
+@pytest.mark.parametrize("f", [f2, f3])
+@pytest.mark.parametrize("N", [5, 10, 30, 60])
+def test_fwd(f, N):
     mi, ma = (-300, 400)
     mi, ma = (-6, 2)
-    N = 30
 
-    expected = poles_f3(N)
-    f = Partial(f3, N=N)
+    f = Partial(f, N=N)
 
-    poles, residues, evals = selective.selective_subdivision_aaa(f, (mi-1.23+(mi-1.1)*1j, ma+1+(ma+2)*1j))
+    poles, residues, evals = selective.selective_subdivision_aaa(f, (mi-1.23+(mi-1.1)*1j, ma+1+(ma+2)*1j), debug_plot_domains=True, max_poles=30, cutoff=1e6, tol_aaa=1e-9, N=100, evolutions_adaptive=8)
     print(f"Poles: {poles}")
     print(f"Residues: {residues}")
     print(f"Evaluations: {evals}")
     print(f"Num Poles: {len(poles)}")
 
-    print("Hall of shame:")
-    for pole in expected:
-        hit = np.any(np.abs(poles-pole)< 1e-5)
-        if not hit:
-            print(pole)
-            plt.scatter([pole.real], [pole.imag], facecolor="none", edgecolor="k")
+    plt.scatter(poles.real, poles.imag, marker=".")
 
     plt.savefig("debug_out/selective.pdf")
     plt.close()
@@ -53,4 +48,3 @@ def test_fwd():
 
 if __name__ == "__main__":
     test_fwd()
-    #pytest.main()

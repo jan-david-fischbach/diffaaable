@@ -1,9 +1,9 @@
 from diffaaable.set_aaa import set_aaa
 import numpy as np
 from baryrat import BarycentricRational
-from diffaaable.core import poles
+from diffaaable.util import poles
 
-def tensor_aaa(z_k, F_k, aaa_tol=1e-9, aaa_mmax=100, thres_numerical_zero = 1e-13, norm_power=0):
+def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-13, norm_power=0):
   """
   Convenience alternative to the vector valued AAA algorithm (`aaa.vectorial`) accepting
   a tensor valued function `F_k` (so arbitrary dimensionality) instead of the single dimension that `aaa.vectorial` requires.
@@ -23,9 +23,9 @@ def tensor_aaa(z_k, F_k, aaa_tol=1e-9, aaa_mmax=100, thres_numerical_zero = 1e-1
         M sample points
       F_k: complex
         Mx... array of the sampled vector (arbitrary size) evaluated at `z_k`
-      aaa_tol: float
+      tol_aaa: float
        tolerance for the AAA algorithm
-      aaa_mmax: int
+      mmax_aaa: int
         maximum number of support points for the AAA algorithm
       thres_numerical_zero: float
         threshold for detecting numerical zeros. These will be replaced by symbolic zeros and not fitted.
@@ -51,7 +51,7 @@ def tensor_aaa(z_k, F_k, aaa_tol=1e-9, aaa_mmax=100, thres_numerical_zero = 1e-1
 
   norm_unique = unique/norm_no_zeros_unique #in the following we abbreiate _unique as _u
 
-  z_j, norm_f_j_u, w_j, z_n = set_aaa(z_k, norm_unique, tol=aaa_tol, mmax=aaa_mmax, normalize=False)
+  z_j, norm_f_j_u, w_j, z_n = set_aaa(z_k, norm_unique, tol=tol_aaa, mmax=mmax_aaa, normalize=False)
   f_j_u = norm_f_j_u * norm_no_zeros_unique
   f_j_no_zeros = f_j_u[:, inv_unique_idx]
 

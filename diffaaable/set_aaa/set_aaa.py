@@ -2,7 +2,7 @@ import numpy as np
 import scipy.sparse as sp
 import logging
 import scipy
-from  diffaaable.core import poles
+from  diffaaable.util import poles
 
 log = logging.getLogger(__name__)
 

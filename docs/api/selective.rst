@@ -4,5 +4,7 @@ Divide and conquer strategy for the AAA algorithm. Similar to the strategy propo
 It divides the region of interest into smaller subregions making sure that poles that are found in the parent region are also found in the subregion.
 If the poles have moved significantly the region is subdivided further. This way it is ensured that (almost) all poles are found accurately.
 
+.. autofunction:: diffaaable.selective.selective_subdivision_aaa
+
 .. automodule:: diffaaable.selective
    :members:
