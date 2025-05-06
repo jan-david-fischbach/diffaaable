@@ -34,7 +34,7 @@ def test_fwd():
     expected = poles_f3(N)
     f = Partial(f3, N=N)
 
-    poles, residues, evals = selective.selective_refinement_aaa(f, (mi-1.23+(mi-1.1)*1j, ma+1+(ma+2)*1j))
+    poles, residues, evals = selective.selective_subdivision_aaa(f, (mi-1.23+(mi-1.1)*1j, ma+1+(ma+2)*1j))
     print(f"Poles: {poles}")
     print(f"Residues: {residues}")
     print(f"Evaluations: {evals}")

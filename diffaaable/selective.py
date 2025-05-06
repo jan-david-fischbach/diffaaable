@@ -169,7 +169,7 @@ def selective_subdivision_aaa(f: callable,
     known_z_k = z_k[sample_mask]
     known_f_k = f_k[sample_mask]
 
-    p, r, e = selective_refinement_aaa(
+    p, r, e = selective_subdivision_aaa(
       f, sub, N, max_poles, cutoff, tol_aaa, tol_pol,
       use_adaptive=use_adaptive,
       suggestions=sug, Dmax=Dmax-1, z_k=known_z_k, f_k=known_f_k,
