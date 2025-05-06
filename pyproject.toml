@@ -28,9 +28,7 @@ dependencies = [
   "numpy>2",
   "jax",
   "jaxlib",
-  "baryrat",
-  "jaxopt",
-  "pandas>=2.2.3"
+  "baryrat"
 ]
 description = "JAX-differentiable AAA algorithm"
 keywords = ["python"]
@@ -49,7 +47,8 @@ dev = [
   "pytest-cov",
   "pytest_regressions",
   "pytest-benchmark",
-  "matplotlib"
+  "matplotlib",
+  "treams"
 ]
 docs = [
   "jupytext",
@@ -196,3 +195,6 @@ showcontent = true
 directory = "fixed"
 name = "Fixed"
 showcontent = true
+
+[tool.uv.sources]
+treams = {url = "https://github.com/jan-david-fischbach/jat/releases/download/v0.5.0p2/treams-0.5.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"}
