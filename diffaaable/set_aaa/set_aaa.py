@@ -68,7 +68,8 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
     f_j = np.r_[f_j, [f_k[next_sample]]] # mxN
 
     # Add column to the Cauchy matrix. Mxm
-    addC = 1/(z_k[:]-z_j[-1])
+    with np.errstate(divide='ignore'):
+        addC = 1/(z_k[:]-z_j[-1])
     C = np.c_[C, addC]
     C[index, m] = 0
 
@@ -82,13 +83,6 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
 
     ee = np.eye(m, m) - np.conj(q.T) @ q
     np.fill_diagonal(ee, np.real(np.diag(ee)))
-
-    # print(f"ee: {ee}")
-    # sU, sS, sV = np.linalg.svd(ee)
-    # if len(sS):
-    #   print(f"smallest singular value: {np.min(sS)}")
-    # else:
-    #   print("smallest singular value: []")
 
     Si = np.linalg.cholesky(ee, upper=True)
     #Si = scipy.linalg.cholesky(ee, lower=False)
@@ -114,7 +108,6 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
     while it<reortho_iterations and H[m,m] < 1/np.sqrt(2)*nv:
       h_new = np.conj(S[:m, :m].T)@(np.conj(Q.T)@v)
       v = v - Q@(S[:m, :m]@h_new)
-      # log.debug(f"{h_new.shape=}")
       H[:m, m] = H[:m, m] + np.squeeze(h_new)
       nv = H[m,m]
       H[m,m] = np.linalg.norm(v)
@@ -124,7 +117,6 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
       log.warning("Hit maximum reorthogonalization iterations")
 
     v = v/H[m,m]
-    #log.debug(f"{v=}")
 
     # add v
     Q = np.c_[Q, v]
