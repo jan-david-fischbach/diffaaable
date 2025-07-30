@@ -70,8 +70,8 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
     # Add column to the Cauchy matrix. Mxm
     with np.errstate(divide='ignore'):
         addC = 1/(z_k[:]-z_j[-1])
-    C = np.c_[C, addC]
-    C[index, m] = 0
+        C = np.c_[C, addC]
+        C[index, m] = 0
 
     # "Compute the next vector of the basis."
     v = C[:, -1:] @ f_j[-1:]
