@@ -1,7 +1,7 @@
 from jax import config
 config.update("jax_enable_x64", True) #important -> else aaa fails
 import jax.numpy as np
-from diffaaable.core import poles
+from diffaaable.util import poles
 
 def check_inputs(z_k, f_k):
   f_k = np.array(f_k)
