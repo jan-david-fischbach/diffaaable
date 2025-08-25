@@ -81,4 +81,4 @@ def tensor_baryrat(z_j, f_j, w_j): #TODO write down properly (eg.g. using jax.vm
 def residues(z_j,f_j,w_j,z_n):
   return residues_vec(
       z_j, f_j.reshape((len(f_j), -1)).T, w_j, z_n
-    ).T.reshape((len(z_n), f_j[0].shape))
+    ).T.reshape((len(z_n), *f_j[0].shape))
