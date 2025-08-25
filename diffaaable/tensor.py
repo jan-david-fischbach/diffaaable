@@ -2,6 +2,7 @@ from diffaaable.set_aaa import set_aaa
 import numpy as np
 from baryrat import BarycentricRational
 from diffaaable.util import poles
+from diffaaable.vectorial import residues_vec
 
 def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-13, norm_power=0):
   """
@@ -76,3 +77,8 @@ def tensor_baryrat(z_j, f_j, w_j): #TODO write down properly (eg.g. using jax.vm
       return res.reshape(out_shape)
 
     return inner
+
+def resiudes(z_j,f_j,w_j,z_n):
+  return residues_vec(
+      z_j, f_j.reshape((len(f_j), -1)).T, w_j, z_n
+    ).T.reshape((len(z_n), f_j[0].shape))
