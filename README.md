@@ -9,7 +9,7 @@ Additionaly the following application specific extensions to the AAA algorithm a
 
 - **Adaptive**: Adaptive refinement strategy (called *Iterative Sample Refinement* (ISR) in the corresponding paper) to minimize the number of function evaluation needed to precisely locate poles within some domain
 - **Vectorial**: AAA algorithm acting on vector valued functions $\mathbf{f}(z)$ as presented in [^3].
-- **Tensor**: Convenience alternative to the vector valued AAA algorithm (aaa.vectorial) accepting a tensor valued function F_k (so arbitrary dimensionality) instead of the single dimension that `vectorial` requires.
+- **Tensor**: Convenience alternative to the vector valued AAA algorithm (`vectorial`) accepting a tensor valued function F_k (so arbitrary dimensionality) instead of the single dimension that `vectorial` requires.
 - **Lorentz**: Variant that enforces symmetric poles around the imaginary axis.
 - **Selective Refinement**: Use a divide and conquer theme to capture many pole simultaneously and accurately, by limiting the number of poles per AAA solve. Suggested in [^4].
 
