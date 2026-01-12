@@ -54,7 +54,7 @@ dev = [
 docs = [
   "jupytext",
   "matplotlib",
-  "jupyter-book",
+  "jupyter-book<2",
   "sphinx_math_dollar"
 ]
 
