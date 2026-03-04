@@ -34,7 +34,7 @@ repos:
   #         - "pydantic"
 
   - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: 97a46d97aea9f027a3a8714244f5c93a74d742de
+    rev: f0026613870451c117014719d8fb28ade8dc67a3
     hooks:
       - id: pretty-format-toml
         args: [--autofix]
