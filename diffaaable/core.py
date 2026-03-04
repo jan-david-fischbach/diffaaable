@@ -123,9 +123,10 @@ def aaa_jvp(primals, tangents):
 
   """
   z_k_full, f_k = primals[:2]
+  tol, mmax = primals[2:]
   z_dot, f_dot = tangents[:2]
 
-  primal_out = aaa(z_k_full, f_k)
+  primal_out = aaa(z_k_full, f_k, tol, mmax)
   z_j, f_j, w_j, z_n = primal_out
 
   chosen = np.isin(z_k_full, z_j)

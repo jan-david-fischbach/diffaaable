@@ -14,12 +14,26 @@ def pole1(a):
     key, subkey = random.split(key)
     z_k = random.uniform(key, (n_sample,))*2+0.5 + random.uniform(subkey, (n_sample,))*1j
     f_k = f(z_k, a)
-    z_j, f_j, w_j, z_n = aaa(z_k, f_k)
+    z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=1e-7)
     p_i = z_n.imag
     p_r = z_n.real
     selected_poles = z_n[p_r>0]
     selected_poles = np.sort(selected_poles)
     return np.real(selected_poles[0])
+
+
+def pole1_with_aux(a):
+    key = random.PRNGKey(0)
+    key, subkey = random.split(key)
+    z_k = random.uniform(key, (n_sample,))*2+0.5 + random.uniform(subkey, (n_sample,))*1j
+    f_k = f(z_k, a)
+    z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=1e-7)
+    p_i = z_n.imag
+    p_r = z_n.real
+    selected_poles = z_n[p_r>0]
+    selected_poles = np.sort(selected_poles)
+    return np.real(selected_poles[0]), z_n
+
 
 def f(x, a):
     return np.tan(a*x)
@@ -30,6 +44,16 @@ def test_tan():
 def test_grad():
     g = jax.grad(pole1)
     g(np.pi/2)
+
+def test_grad_poles_vs_forward():
+    g = jax.grad(pole1_with_aux, has_aux=True)
+
+    grad, aux_g = g(np.pi/2)
+    val, aux_f = pole1_with_aux(np.pi/2)
+
+    print(aux_g, aux_f)
+
+    assert np.allclose(aux_f, aux_f)
 
 @pytest.mark.xfail
 def test_jacfwd():
