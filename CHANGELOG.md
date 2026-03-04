@@ -2,6 +2,11 @@
 
 <!-- towncrier release notes start -->
 
+## [1.3.1](https://github.com/jan-david-fischbach/diffaaable/releases/tag/v1.3.1) - 2026-03-04
+
+No significant changes.
+
+
 ## [1.3.0](https://github.com/jan-david-fischbach/diffaaable/releases/tag/v1.3.0) - 2026-03-04
 
 No significant changes.

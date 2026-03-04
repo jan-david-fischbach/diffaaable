@@ -1,4 +1,4 @@
-# diffaaable 1.3.0
+# diffaaable 1.3.1
 [![DOI](https://zenodo.org/badge/855681812.svg)](https://doi.org/10.5281/zenodo.18224288)
 
 ![](docs/assets/diffaaable.png)
