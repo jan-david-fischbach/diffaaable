@@ -34,7 +34,7 @@ def test_fwd(f, N):
 
     f = Partial(f, N=N)
 
-    poles, residues, evals = selective.selective_subdivision_aaa(f, (mi-1.23+(mi-1.1)*1j, ma+1+(ma+2)*1j), debug_plot_domains=True, max_poles=30, cutoff=1e6, tol_aaa=1e-9, N=100, evolutions_adaptive=8)
+    poles, residues, evals = selective.selective_subdivision_aaa(f, (mi-1.23+(mi-1.1)*1j, ma+1+(ma+2)*1j), debug_plot_domains=False, max_poles=30, cutoff=1e6, tol_aaa=1e-9, N=100, evolutions_adaptive=8)
     print(f"Poles: {poles}")
     print(f"Residues: {residues}")
     print(f"Evaluations: {evals}")
