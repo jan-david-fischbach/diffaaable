@@ -4,7 +4,7 @@
 ### {{ definitions[category]['name'] }}
 
 {% for text, values in sections[""][category].items() %}
-- {{ text }} {{ values | join(', ') }}
+- {{ text }}{{ (' ' ~ values | join(', ')) if values }}
 {% endfor %}
 
 {% endfor %}

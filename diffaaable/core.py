@@ -7,7 +7,7 @@ import numpy as np
 from baryrat import aaa as oaaa # ordinary aaa
 from .tensor import tensor_aaa
 import functools
-from .util import poles
+from .util import poles, barycentric_jvp
 
 USE_SETAAA = False
 
@@ -34,7 +34,7 @@ def aaa(z_k: npt.NDArray, f_k: npt.NDArray, tol: float=1e-13, mmax: int=100):
 
     z_n = poles(z_j, w_j)
 
-  z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
+  z_n = z_n[np.argsort(-np.abs(z_n))]
 
   return z_j, f_j, w_j, z_n
 
@@ -122,56 +122,12 @@ def aaa_jvp(primals, tangents):
     \]
 
   """
-  z_k_full, f_k = primals[:2]
-  tol, mmax = primals[2:]
+  z_k, f_k = primals[:2]
   z_dot, f_dot = tangents[:2]
 
-  primal_out = aaa(z_k_full, f_k, tol, mmax)
-  z_j, f_j, w_j, z_n = primal_out
-
-  chosen = np.isin(z_k_full, z_j)
-
-  z_k = z_k_full[~chosen]
-  f_k = f_k[~chosen]
-
-  # z_dot should be zero anyways
-  if np.any(z_dot):
-    raise NotImplementedError("Parametrizing the sampling positions z_k is not supported")
-  z_k_dot = z_dot[~chosen]
-  f_k_dot = f_dot[~chosen] # $\del f_k / \del p$
-
-  ##################################################
-  # We have to track which f_dot corresponds to z_k
-  sort_orig = jnp.argsort(jnp.abs(z_k_full[chosen]))
-  sort_out = jnp.argsort(jnp.argsort(jnp.abs(z_j)))
-
-  z_j_dot = z_dot[chosen][sort_orig][sort_out]
-  f_j_dot = f_dot[chosen][sort_orig][sort_out]
-  ##################################################
-
-  C = 1/(z_k[:, None]-z_j[None, :]) # Cauchy matrix k x j
-
-  d = C @ w_j # denominator in barycentric formula
-  via_f_j = C @ (f_j_dot * w_j) / d # $\sum_j f_j^\prime \frac{\del r}{\del f_j}$
-
-  A = (f_j[None, :] - f_k[:, None])*C/d[:, None]
-  b = f_k_dot - via_f_j
-
-  # make sure system is not underdetermined according to eq. 5 of [1]
-  A = jnp.concatenate([A, np.conj(w_j.reshape(1, -1))])
-  b = jnp.append(b, 0)
-
-  with jax.disable_jit(): #otherwise backwards differentiation led to error
-    w_j_dot, _, _, _ = jnp.linalg.lstsq(A, b)
-
-  denom = z_n.reshape(1, -1)-z_j.reshape(-1, 1)
-  # jax.debug.print("wj: {}", w_j.reshape(-1, 1))
-  # jax.debug.print("denom^2: {}", denom**2)
-  z_n_dot = (
-    jnp.sum(w_j_dot.reshape(-1, 1)/denom,    axis=0)/
-    jnp.sum(w_j.reshape(-1, 1)    /denom**2, axis=0)
-  )
-
-  tangent_out = z_j_dot, f_j_dot, w_j_dot, z_n_dot
+  primal_out = aaa(*primals)
+  # like baryrat, accept samples of any shape (e.g. on a meshgrid)
+  z_k, f_k, z_dot, f_dot = (jnp.ravel(x) for x in (z_k, f_k, z_dot, f_dot))
+  tangent_out = barycentric_jvp(z_k, f_k, z_dot, f_dot, *primal_out)
 
   return primal_out, tangent_out

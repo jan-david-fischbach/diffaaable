@@ -1,14 +1,13 @@
-from jax import config
-config.update("jax_enable_x64", True) #important -> else aaa fails
-import jax.numpy as np
-from diffaaable.util import poles
+import jax
+import numpy as np
+from diffaaable.util import poles, aaa_jvp_rule
 
 def check_inputs(z_k, f_k):
   f_k = np.array(f_k)
   z_k = np.array(z_k)
 
   if z_k.ndim != 1:
-    raise ValueError("z_k should be 1D but has shape {z_k.shape}")
+    raise ValueError(f"z_k should be 1D but has shape {z_k.shape}")
   M = z_k.shape[0]
 
   if f_k.ndim == 1:
@@ -36,12 +35,30 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
         the approximation tolerance
       mmax : int
         the maximum number of iterations/degree of the resulting approximant
+      return_errors : bool
+        additionally return the errors of each iteration (not differentiable)
 
-  Returns:
+  Returns
+  -------
+    z_j : array (m,)
+      nodes of the barycentric approximant
+    f_j : array (m, V)
+      values of the barycentric approximant
+    w_j : array (m,)
+      weights of the barycentric approximant
+    z_n : array (m-1,)
+      poles of the barycentric approximant
+    errors : list
+      only if `return_errors`
 
-
-
+  The result is JAX differentiable with respect to `f_k` (via a custom JVP
+  analogous to `diffaaable.aaa`) unless `return_errors` is set.
   """
+  if return_errors:
+    return _vectorial_aaa(z_k, f_k, tol, mmax, return_errors=True)
+  return _vectorial_aaa_diff(z_k, f_k, tol, mmax)
+
+def _vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
   z_k, f_k, M, V = check_inputs(z_k, f_k)
 
   J = np.ones(M, dtype=bool)
@@ -60,7 +77,7 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
       jj = np.argmax(np.linalg.norm(f_k - r_k, axis=-1)) #Next sample point to include
       z_j = np.append(z_j, np.array([z_k[jj]]))
       f_j = np.concatenate([f_j, f_k[jj][None, :]])
-      J = J.at[jj].set(False)
+      J[jj] = False
 
       # Cauchy matrix containing the basis functions as columns
       C = 1.0 / (z_k[J,None] - z_j[None,:])
@@ -73,7 +90,7 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
       # compute weights as right singular vector for smallest singular value
       if return_errors:
          print("start SVD")
-      _, _, Vh = np.linalg.svd(A)
+      _, _, Vh = np.linalg.svd(A, full_matrices=False)
       if return_errors:
          print("finished SVD")
 
@@ -84,7 +101,8 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
       D = C.dot(w_j)[:, None]
 
       # update residual
-      r_k = f_k.at[J].set(N / D)
+      r_k = f_k.copy()
+      r_k[J] = N / D
 
       # check for convergence
       errors.append(np.linalg.norm(f_k - r_k, np.inf))
@@ -98,6 +116,12 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
     return z_j, f_j, w_j, z_n, errors
   return z_j, f_j, w_j, z_n
 
+
+@jax.custom_jvp
+def _vectorial_aaa_diff(z_k, f_k, tol=1e-13, mmax=100):
+  return _vectorial_aaa(z_k, f_k, tol, mmax)
+
+_vectorial_aaa_diff.defjvp(aaa_jvp_rule(_vectorial_aaa))
 
 def residues_vec(z_j,f_j,w_j,z_n):
   '''Vectorial residues for given poles via formula for simple poles

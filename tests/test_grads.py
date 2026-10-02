@@ -116,3 +116,22 @@ def test_lstsq():
 if __name__ == "__main__":
     #test_jvp_complex_input()
     test_grad()
+
+def pole_on_grid(a, flat=False):
+    # avoid sampling exactly on the pole at z=3
+    z_r = np.linspace(0, 2.5, 20)
+    Z_r, Z_i = np.meshgrid(z_r, z_r)
+    z_k = Z_r + 1j*Z_i
+    if flat:
+        z_k = z_k.ravel()
+    z_j, f_j, w_j, z_n = aaa(z_k, f(z_k, a))
+    return np.real(z_n[np.argmin(np.abs(z_n - 1))])
+
+def test_grad_2d_samples():
+    """z_k on a 2D meshgrid (as in docs/usage.md)."""
+    a = np.pi/2
+    g_grid = jax.grad(pole_on_grid)(a)
+    g_flat = jax.grad(pole_on_grid)(a, flat=True)
+    assert np.allclose(g_grid, g_flat)
+    # pole at pi/(2a) -> d/da = -pi/(2a^2) = -2/pi
+    assert np.allclose(g_grid, -2/np.pi, rtol=1e-4)

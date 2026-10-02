@@ -7,7 +7,7 @@ import jaxopt
 
 def optimal_weights(A, A_hat, stepsize=0.5):
   # Initial guess (from uncorrected A)
-  _, _, Vh = np.linalg.svd(A)
+  _, _, Vh = np.linalg.svd(A, full_matrices=False)
   w_j = Vh[-1, :].conj()
 
   def obj_fun(w):
@@ -26,6 +26,7 @@ def lorentz_aaa(z_k, f_k, tol=1e-9, mmax=100, return_errors=False):
   """
   """
   z_k, f_k, M, V = check_inputs(z_k, f_k)
+  z_k, f_k = np.asarray(z_k), np.asarray(f_k)
 
   J = np.ones(M, dtype=bool)
   z_j = np.empty(0, dtype=z_k.dtype)
