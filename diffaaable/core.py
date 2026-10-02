@@ -126,6 +126,8 @@ def aaa_jvp(primals, tangents):
   z_dot, f_dot = tangents[:2]
 
   primal_out = aaa(*primals)
+  # like baryrat, accept samples of any shape (e.g. on a meshgrid)
+  z_k, f_k, z_dot, f_dot = (jnp.ravel(x) for x in (z_k, f_k, z_dot, f_dot))
   tangent_out = barycentric_jvp(z_k, f_k, z_dot, f_dot, *primal_out)
 
   return primal_out, tangent_out
