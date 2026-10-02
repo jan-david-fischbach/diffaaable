@@ -1,19 +1,34 @@
+import jax
 import numpy as np
 import logging
-from  diffaaable.util import poles
+from diffaaable.util import poles, aaa_jvp_rule
 
 log = logging.getLogger(__name__)
 
 np.set_printoptions(edgeitems=30, linewidth=100000,
     precision=14)
 
+@jax.custom_jvp
 def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True):
   """Implementation of the vector valued AAA algorithm avoiding repeated large SVDs
+
+  JAX differentiable with respect to `f_k` via a custom JVP analogous to
+  `diffaaable.aaa`.
 
   Args:
       z_k (complex): M sample points
       f_k (complex): MxN array of the sampled vector (size N) at `z_k`
+      tol (float): approximation tolerance
+      mmax (int): maximum number of support points
+      reortho_iterations (int): maximum number of reorthogonalization steps
+      normalize (bool): normalize each entry by its maximum absolute value
+
+  Returns:
+      z_j, f_j, w_j, z_n: nodes, values (mxN), weights and poles
   """
+  return _set_aaa(z_k, f_k, tol, mmax, reortho_iterations, normalize)
+
+def _set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True):
 
   z_k = np.asarray(z_k)
   f_k = np.asarray(f_k)
@@ -153,6 +168,15 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
 
   z_n = poles(z_j, w_j)
   return z_j, f_j, w_j, z_n
+
+
+def _entry_weights(z_k, f_k, tol, mmax, reortho_iterations, normalize):
+  # mirror the normalization of the fit in the least squares problem of the JVP
+  if not normalize:
+    return None
+  return 1/np.max(np.abs(np.asarray(f_k)), axis=0)
+
+set_aaa.defjvp(aaa_jvp_rule(_set_aaa, _entry_weights))
 
 
 ################### Testing #################################

@@ -1,5 +1,6 @@
+import jax
 import numpy as np
-from diffaaable.util import poles
+from diffaaable.util import poles, aaa_jvp_rule
 
 def check_inputs(z_k, f_k):
   f_k = np.array(f_k)
@@ -34,12 +35,30 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
         the approximation tolerance
       mmax : int
         the maximum number of iterations/degree of the resulting approximant
+      return_errors : bool
+        additionally return the errors of each iteration (not differentiable)
 
-  Returns:
+  Returns
+  -------
+    z_j : array (m,)
+      nodes of the barycentric approximant
+    f_j : array (m, V)
+      values of the barycentric approximant
+    w_j : array (m,)
+      weights of the barycentric approximant
+    z_n : array (m-1,)
+      poles of the barycentric approximant
+    errors : list
+      only if `return_errors`
 
-
-
+  The result is JAX differentiable with respect to `f_k` (via a custom JVP
+  analogous to `diffaaable.aaa`) unless `return_errors` is set.
   """
+  if return_errors:
+    return _vectorial_aaa(z_k, f_k, tol, mmax, return_errors=True)
+  return _vectorial_aaa_diff(z_k, f_k, tol, mmax)
+
+def _vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
   z_k, f_k, M, V = check_inputs(z_k, f_k)
 
   J = np.ones(M, dtype=bool)
@@ -97,6 +116,12 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
     return z_j, f_j, w_j, z_n, errors
   return z_j, f_j, w_j, z_n
 
+
+@jax.custom_jvp
+def _vectorial_aaa_diff(z_k, f_k, tol=1e-13, mmax=100):
+  return _vectorial_aaa(z_k, f_k, tol, mmax)
+
+_vectorial_aaa_diff.defjvp(aaa_jvp_rule(_vectorial_aaa))
 
 def residues_vec(z_j,f_j,w_j,z_n):
   '''Vectorial residues for given poles via formula for simple poles

@@ -1,9 +1,11 @@
-from diffaaable.set_aaa import set_aaa
+import jax
 import numpy as np
+from diffaaable.set_aaa.set_aaa import _set_aaa
 from baryrat import BarycentricRational
-from diffaaable.util import poles
+from diffaaable.util import poles, aaa_jvp_rule
 from diffaaable.vectorial import residues_vec
 
+@jax.custom_jvp
 def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-13, norm_power=0):
   """
   Convenience alternative to the vector valued AAA algorithm (`aaa.vectorial`) accepting
@@ -33,8 +35,13 @@ def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-1
       norm_power: int
         The different tensor entries are normalized by their maximum absolute value to the power of `norm_power`.
         By default `norm_power=0` the tensor entries are not normalized.
-  """
 
+  The result is JAX differentiable with respect to `F_k` via a custom JVP
+  analogous to `diffaaable.aaa`.
+  """
+  return _tensor_aaa(z_k, F_k, tol_aaa, mmax_aaa, thres_numerical_zero, norm_power)
+
+def _tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-13, norm_power=0):
   total_vec = np.array([np.array(F_ki) for F_ki in F_k]).reshape(len(z_k), -1)
 
   norm = np.max(np.abs(total_vec), axis=0)
@@ -52,7 +59,7 @@ def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-1
 
   norm_unique = unique/norm_no_zeros_unique #in the following we abbreiate _unique as _u
 
-  z_j, norm_f_j_u, w_j, z_n = set_aaa(z_k, norm_unique, tol=tol_aaa, mmax=mmax_aaa, normalize=False)
+  z_j, norm_f_j_u, w_j, z_n = _set_aaa(z_k, norm_unique, tol=tol_aaa, mmax=mmax_aaa, normalize=False)
   f_j_u = norm_f_j_u * norm_no_zeros_unique
   f_j_no_zeros = f_j_u[:, inv_unique_idx]
 
@@ -64,6 +71,14 @@ def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-1
 
   z_n = poles(z_j, w_j)
   return z_j, f_j, w_j, z_n
+
+def _entry_weights(z_k, F_k, tol_aaa, mmax_aaa, thres_numerical_zero, norm_power):
+  # mirror the normalization (and exclusion of numerical zeros) of the fit
+  norm = np.max(np.abs(np.asarray(F_k).reshape(len(z_k), -1)), axis=0)
+  zero = norm < thres_numerical_zero
+  return np.where(zero, 0, 1/np.where(zero, 1, norm)**norm_power)
+
+tensor_aaa.defjvp(aaa_jvp_rule(_tensor_aaa, _entry_weights))
 
 def tensor_baryrat(z_j, f_j, w_j): #TODO write down properly (eg.g. using jax.vmap)
     shape = f_j[0].shape

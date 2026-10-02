@@ -118,7 +118,7 @@ def weights_jvp(z_k, f_k, f_dot, z_j, w_j, entry_weights=None):
 
   if entry_weights is not None:
     entry_weights = np.asarray(entry_weights).reshape(-1)
-    keep = entry_weights != 0
+    keep = (entry_weights != 0) & np.isfinite(entry_weights)
     f_k = f_k[:, keep] * entry_weights[keep]
     f_dot = f_dot[:, keep] * entry_weights[keep]
 
@@ -171,7 +171,7 @@ def barycentric_jvp(z_k, f_k, z_dot, f_dot, z_j, f_j, w_j, z_n, entry_weights=No
 
   idx = node_indices(z_k, z_j)
   z_j_dot = z_dot[idx]
-  f_j_dot = jnp.reshape(f_dot[idx], np.shape(f_j))
+  f_j_dot = jnp.reshape(f_dot[idx], np.shape(f_j)).astype(np.result_type(f_j))
 
   w_j_dot = weights_jvp(z_k, f_k, f_dot, z_j, w_j, entry_weights)
   z_n_dot = poles_jvp(z_j, w_j, z_n, w_j_dot)
