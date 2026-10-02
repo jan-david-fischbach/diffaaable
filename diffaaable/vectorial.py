@@ -1,6 +1,4 @@
-from jax import config
-config.update("jax_enable_x64", True) #important -> else aaa fails
-import jax.numpy as np
+import numpy as np
 from diffaaable.util import poles
 
 def check_inputs(z_k, f_k):
@@ -8,7 +6,7 @@ def check_inputs(z_k, f_k):
   z_k = np.array(z_k)
 
   if z_k.ndim != 1:
-    raise ValueError("z_k should be 1D but has shape {z_k.shape}")
+    raise ValueError(f"z_k should be 1D but has shape {z_k.shape}")
   M = z_k.shape[0]
 
   if f_k.ndim == 1:
@@ -60,7 +58,7 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
       jj = np.argmax(np.linalg.norm(f_k - r_k, axis=-1)) #Next sample point to include
       z_j = np.append(z_j, np.array([z_k[jj]]))
       f_j = np.concatenate([f_j, f_k[jj][None, :]])
-      J = J.at[jj].set(False)
+      J[jj] = False
 
       # Cauchy matrix containing the basis functions as columns
       C = 1.0 / (z_k[J,None] - z_j[None,:])
@@ -73,7 +71,7 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
       # compute weights as right singular vector for smallest singular value
       if return_errors:
          print("start SVD")
-      _, _, Vh = np.linalg.svd(A)
+      _, _, Vh = np.linalg.svd(A, full_matrices=False)
       if return_errors:
          print("finished SVD")
 
@@ -84,7 +82,8 @@ def vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
       D = C.dot(w_j)[:, None]
 
       # update residual
-      r_k = f_k.at[J].set(N / D)
+      r_k = f_k.copy()
+      r_k[J] = N / D
 
       # check for convergence
       errors.append(np.linalg.norm(f_k - r_k, np.inf))
