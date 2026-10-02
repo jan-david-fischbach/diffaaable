@@ -16,10 +16,9 @@ convention = "google"
 
 [project]
 authors = [
-  {name = "Jan David Fischbach", email = "fischbach@kit.edu"}
+  { name = "Jan David Fischbach", email = "fischbach@kit.edu" }
 ]
 classifiers = [
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Operating System :: OS Independent"
@@ -34,10 +33,10 @@ dependencies = [
 ]
 description = "JAX-differentiable AAA algorithm"
 keywords = ["python"]
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 name = "diffaaable"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 version = "1.3.1"
 
 [project.optional-dependencies]
