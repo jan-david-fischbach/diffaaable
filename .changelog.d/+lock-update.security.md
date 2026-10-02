@@ -1,1 +1,0 @@
-Updated `uv.lock` to patched versions of pillow, tornado, urllib3, requests, soupsieve, filelock, idna, pytest, setuptools and pygments, resolving all open Dependabot alerts (dev/docs dependencies only).
