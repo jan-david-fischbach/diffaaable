@@ -1,5 +1,4 @@
-import jax.numpy as np
-import numpy as onp
+import numpy as np
 from diffaaable.core import aaa
 from diffaaable.util import residues
 from diffaaable.adaptive import Domain, domain_mask, adaptive_aaa
@@ -204,7 +203,7 @@ def selective_subdivision_aaa(f: callable,
 
     if len(z_k) < N:
       z_k_new = sample_domain(domain, N)
-      f_k = np.append(f_k, f(z_k_new))
+      f_k = np.append(f_k, np.asarray(f(z_k_new)))
       z_k = np.append(z_k, z_k_new)
 
       eval_count += len(z_k_new)
@@ -226,11 +225,11 @@ def selective_subdivision_aaa(f: callable,
       z_k = sample_rim(domain, N)
     else:
       z_k = sample_domain(reduced_domain(domain, 1.05), N)
-    f_k = f(z_k)
+    f_k = np.asarray(f(z_k))
     eval_count += len(f_k)
     try:
       z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=tol_aaa)
-    except onp.linalg.LinAlgError as e:
+    except np.linalg.LinAlgError as e:
       z_n = z_j = f_j = w_j = np.empty((0,))
 
   poles = z_n[domain_mask(domain, z_n)]

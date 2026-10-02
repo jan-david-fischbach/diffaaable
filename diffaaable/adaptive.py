@@ -1,6 +1,7 @@
 import functools
 from typing import Union
-import jax.numpy as np
+import jax.numpy as jnp
+import numpy as np
 import numpy.typing as npt
 from diffaaable import aaa
 import jax
@@ -19,6 +20,9 @@ def domain_mask(domain: Domain, z_n):
 
 @jax.tree_util.Partial
 def next_samples(z_n, prev_z_n, z_k, domain: Domain, radius, randkey, tolerance=1e-9, min_samples=0, max_samples=0):
+  # host side numpy: avoids JAX recompilation for every new array shape
+  z_n = np.asarray(z_n)
+  prev_z_n = np.asarray(prev_z_n)
   z_n = z_n[domain_mask(domain, z_n)]
   movement = np.min(np.abs(z_n[:, None]-prev_z_n[None, :]), axis=-1)
   ranking = np.argsort(-movement)
@@ -32,21 +36,22 @@ def next_samples(z_n, prev_z_n, z_k, domain: Domain, radius, randkey, tolerance=
     z_n_unstable = z_n[ranking[:min_samples]]
 
   add_z_k = z_n_unstable
-  add_z_k += radius*np.exp(1j*2*np.pi*jax.random.uniform(randkey, add_z_k.shape))
+  rng = np.random.default_rng(np.asarray(jax.random.key_data(randkey)))
+  add_z_k = add_z_k + radius*np.exp(1j*2*np.pi*rng.uniform(size=add_z_k.shape))
   return add_z_k
 
 
 def heat(poles, samples, mesh, sigma):
   #jax.debug.print("poles: {}", poles)
-  f_p = np.nansum(
-    np.exp(-np.abs(poles[:, None, None]-mesh[None, :])**2/sigma**2),
+  f_p = jnp.nansum(
+    jnp.exp(-jnp.abs(poles[:, None, None]-mesh[None, :])**2/sigma**2),
     axis=0
   )
 
   #jax.debug.print("{}", f_p)
 
-  f = f_p / np.nansum(
-    sigma**2/np.abs(mesh[None, :]-samples[:, None, None])**2,
+  f = f_p / jnp.nansum(
+    sigma**2/jnp.abs(mesh[None, :]-samples[:, None, None])**2,
     axis=0
   )
   return f
@@ -57,21 +62,21 @@ def _next_samples_heat(
   batchsize=1, stop=0.2
   ):
 
-  x = np.linspace(domain[0].real, domain[1].real, resolution[0])
-  y = np.linspace(domain[0].imag, domain[1].imag, resolution[1])
+  x = jnp.linspace(domain[0].real, domain[1].real, resolution[0])
+  y = jnp.linspace(domain[0].imag, domain[1].imag, resolution[1])
 
-  X, Y = np.meshgrid(x,y, indexing="ij")
+  X, Y = jnp.meshgrid(x,y, indexing="ij")
   mesh = X +1j*Y
 
-  add_samples = np.empty(0, dtype=complex)
+  add_samples = jnp.empty(0, dtype=complex)
   for j in range(batchsize):
-    heat_map = heat(poles, np.concat([samples, add_samples]), mesh, sigma=radius)
-    next_i = np.unravel_index(np.nanargmax(heat_map), heat_map.shape)
+    heat_map = heat(poles, jnp.concat([samples, add_samples]), mesh, sigma=radius)
+    next_i = jnp.unravel_index(jnp.nanargmax(heat_map), heat_map.shape)
 
-    next = np.where(heat_map[next_i] < stop, np.nan, mesh[next_i])
-    add_samples = np.append(add_samples, next)
+    next = jnp.where(heat_map[next_i] < stop, jnp.nan, mesh[next_i])
+    add_samples = jnp.append(add_samples, next)
 
-  return add_samples, X, Y, heat(poles, np.concat([samples]), mesh, sigma=radius)
+  return add_samples, X, Y, heat(poles, jnp.concat([samples]), mesh, sigma=radius)
 
 @jax.tree_util.Partial
 def next_samples_heat(
@@ -84,6 +89,7 @@ def next_samples_heat(
     batchsize, stop
   )
 
+  add_samples = np.asarray(add_samples)
   add_samples = add_samples[~np.isnan(add_samples)]
 
   if debug:
@@ -114,20 +120,21 @@ def next_samples_heat(
 
 vanilla_aaa = jax.tree_util.Partial(aaa)
 
+def _take(a, idx):
+    # tangents can be tracers (e.g. under jax.grad) -> index in JAX
+    if isinstance(a, jax.core.Tracer):
+      return a[idx]
+    return np.asarray(a)[idx]
+
 def mask(z_k, f_k, f_k_dot, cutoff):
-    def all_f(f):
-      # to make sure all f_k (in case of tensor valued functions) behave nice
-      return np.squeeze(np.apply_over_axes(np.all, f, np.arange(f.ndim-1)+1))
-    m = all_f(np.abs(f_k)<cutoff)    #filter out values, that have diverged too strongly
-    m = np.logical_and(m, all_f(~np.isnan(f_k)))   #filter out nans
-    m = np.logical_and(m, ~np.isnan(z_k))   #filter out nans
-
-    if m.ndim == 2:
-      m = np.all(m, axis=1)
-    z_k, f_k, f_k_dot = z_k[m], f_k[m], f_k_dot[m]
-
-    z_k, idx = np.unique(z_k, return_index=True) #filter out duplicates
-    return z_k, f_k[idx], f_k_dot[idx]
+    z_np = np.asarray(z_k)
+    f_np = np.asarray(f_k).reshape(len(z_np), -1)
+    # abs(nan) < cutoff is False -> also filters nans
+    m = np.all(np.abs(f_np) < cutoff, axis=1) & ~np.isnan(z_np)
+    idx = np.flatnonzero(m)
+    _, first = np.unique(z_np[idx], return_index=True) #filter out duplicates
+    idx = idx[first]
+    return z_np[idx], np.asarray(f_k)[idx], _take(f_k_dot, idx)
 
 def _adaptive_aaa(z_k_0: npt.NDArray,
                  f: callable,
@@ -164,8 +171,10 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     sampling = next_samples_heat
 
   collect_tangents = f_dot is not None
-  z_k = z_k_0
-  max_dist = np.max(np.abs(z_k_0[:, np.newaxis] - z_k_0[np.newaxis, :]))
+  # bookkeeping is done in numpy: eager jax.numpy would recompile for every
+  # new array shape. Only the tangents f_k_dot may need to stay in JAX.
+  z_k = np.asarray(z_k_0)
+  max_dist = np.max(np.abs(z_k[:, np.newaxis] - z_k[np.newaxis, :]))
 
   if collect_tangents:
     f_unpartial = f.func
@@ -180,6 +189,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
       f_k = f(z_k)
     else:
       f_k = f_k_0
+    f_k = np.asarray(f_k)
     f_k_dot = np.zeros_like(f_k)
 
   if cutoff is None:
@@ -223,8 +233,8 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
       f_k_dot_new = np.zeros_like(f_k_new)
 
     z_k = np.append(z_k, add_z_k)
-    f_k = np.concatenate([f_k, f_k_new])
-    f_k_dot = np.concatenate([f_k_dot, f_k_dot_new])
+    f_k = np.concatenate([f_k, np.asarray(f_k_new)])
+    f_k_dot = (jnp if collect_tangents else np).concatenate([f_k_dot, f_k_dot_new])
 
   z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot, cutoff=cutoff)
 

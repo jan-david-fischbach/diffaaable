@@ -34,7 +34,7 @@ def aaa(z_k: npt.NDArray, f_k: npt.NDArray, tol: float=1e-13, mmax: int=100):
 
     z_n = poles(z_j, w_j)
 
-  z_n = z_n[jnp.argsort(-jnp.abs(z_n))]
+  z_n = z_n[np.argsort(-np.abs(z_n))]
 
   return z_j, f_j, w_j, z_n
 
