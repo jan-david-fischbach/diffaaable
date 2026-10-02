@@ -24,6 +24,12 @@ Please refer to the [quickstart tutorial](./usage.md)
 ## Contributing
 Feel free to open issues and/or PRs.
 
+User facing changes are recorded with [towncrier](https://towncrier.readthedocs.io):
+add a one-line fragment to `.changelog.d/`, named `<PR number>.<type>.md`
+(or `+<name>.<type>.md` without a PR), where `<type>` is one of `added`,
+`changed`, `performance`, `fixed`, `deprecated`, `removed` or `security`, e.g.
+`towncrier create -c "Faster set_aaa." +faster-set-aaa.performance.md`.
+
 ## Citation
 When using this software package for scientific work please cite the associated publication [^2].
 

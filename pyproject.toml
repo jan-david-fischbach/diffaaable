@@ -16,7 +16,7 @@ convention = "google"
 
 [project]
 authors = [
-  {name = "Jan David Fischbach", email = "fischbach@kit.edu"}
+  { name = "Jan David Fischbach", email = "fischbach@kit.edu" }
 ]
 classifiers = [
   "Programming Language :: Python :: 3.9",
@@ -34,7 +34,7 @@ dependencies = [
 ]
 description = "JAX-differentiable AAA algorithm"
 keywords = ["python"]
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 name = "diffaaable"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -161,26 +161,12 @@ regex = '''
 directory = ".changelog.d"
 filename = "CHANGELOG.md"
 issue_format = "[#{issue}](https://github.com/jan-david-fischbach/diffaaable/issues/{issue})"
+orphan_prefix = "+"
 package = "diffaaable"
 start_string = "<!-- towncrier release notes start -->\n"
 template = ".changelog.d/changelog_template.jinja"
 title_format = "## [{version}](https://github.com/jan-david-fischbach/diffaaable/releases/tag/v{version}) - {project_date}"
 underlines = ["", "", ""]
-
-[[tool.towncrier.type]]
-directory = "security"
-name = "Security"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "removed"
-name = "Removed"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "deprecated"
-name = "Deprecated"
-showcontent = true
 
 [[tool.towncrier.type]]
 directory = "added"
@@ -193,6 +179,26 @@ name = "Changed"
 showcontent = true
 
 [[tool.towncrier.type]]
+directory = "performance"
+name = "Performance"
+showcontent = true
+
+[[tool.towncrier.type]]
 directory = "fixed"
 name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removed"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "security"
+name = "Security"
 showcontent = true
