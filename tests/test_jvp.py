@@ -56,3 +56,31 @@ def test_value_tangents_shape(variant):
   primal, tangent = jax.jvp(lambda a: fit(z_k, f(a, z_k)), (a0,), (1.0,))
   for p, t in zip(primal, tangent):
     assert onp.shape(p) == onp.shape(t)
+
+def test_adaptive_tensor_grad():
+  from jax.tree_util import Partial
+  from diffaaable import adaptive_aaa
+
+  def pole_adaptive(x, fit):
+    a = x + 0.1j
+    f = Partial(lambda a, z: jnp.stack([1/(z-a), 2j/(z-a) + 1/(z-3j)], -1), a)
+    z_k = jnp.linspace(-1, 1, 20) + 0.3j
+    z_j, f_j, w_j, z_n = adaptive_aaa(z_k, f, aaa=fit, domain=(-2-2j, 2+2j))
+    return jnp.real(z_n[jnp.argmin(jnp.abs(z_n - a))])
+
+  for fit in [tensor_aaa, vectorial_aaa]:
+    assert jnp.isclose(jax.grad(pole_adaptive)(0.5, fit), 1.0)
+    assert jnp.isclose(jax.jvp(lambda x: pole_adaptive(x, fit), (0.5,), (1.0,))[1], 1.0)
+
+def test_adaptive_return_samples_grad():
+  from jax.tree_util import Partial
+  from diffaaable import adaptive_aaa
+
+  def pole_adaptive(x):
+    a = x + 0.1j
+    f = Partial(lambda a, z: 1/(z-a) + jnp.tan(z), a)
+    z_k = jnp.linspace(-1, 1, 20) + 0.3j
+    z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(z_k, f, return_samples=True)
+    return jnp.real(z_n[jnp.argmin(jnp.abs(z_n - a))])
+
+  assert jnp.isclose(jax.grad(pole_adaptive)(0.5), 1.0)

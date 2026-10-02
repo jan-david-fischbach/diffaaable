@@ -244,7 +244,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     return z_j, f_j, w_j, z_n, z_k, f_k
   return z_j, f_j, w_j, z_n
 
-@jax.custom_jvp
+# sampling, return_samples and aaa are static: functions are no valid JAX
+# types and return_samples changes the output structure
+@partial(jax.custom_jvp, nondiff_argnums=(9, 11, 12))
 def adaptive_aaa(z_k_0: npt.NDArray,
                  f:callable,
                  evolutions: int = 2,
@@ -316,8 +318,10 @@ def adaptive_aaa(z_k_0: npt.NDArray,
       If True, the function returns the samples used for the AAA approximation
       and the function evaluations at these points at the 4t and 5th position.
   aaa: callable
-      The AAA variant to be used. By default `diffaaable.aaa` is used.
-      If you want to use the tensor AAA, you can pass `diffaaable.tensor.tensor_aaa`.
+      The AAA variant to be used, called as `aaa(z_k, f_k, tol, mmax)`.
+      By default `diffaaable.aaa` is used. For vector/tensor valued `f`
+      you can pass `diffaaable.tensor_aaa` or `diffaaable.vectorial_aaa`.
+      Gradients are computed with the JVP of the chosen variant.
 
 
   Returns
@@ -344,8 +348,9 @@ def adaptive_aaa(z_k_0: npt.NDArray,
   )
 
 @adaptive_aaa.defjvp
-def adaptive_aaa_jvp(primals, tangents):
-  z_k_0, f = primals[:2]
+def adaptive_aaa_jvp(sampling, return_samples, aaa, primals, tangents):
+  (z_k_0, f, evolutions, cutoff, tol, mmax, radius, domain, f_k_0,
+   prev_z_n) = primals
   z_dot, f_dot = tangents[:2]
 
   if np.any(z_dot):
@@ -353,9 +358,21 @@ def adaptive_aaa_jvp(primals, tangents):
       "Parametrizing the sampling positions z_k is not supported"
     )
 
-  z_k, f_k, f_k_dot = \
-    _adaptive_aaa(z_k_0, f, *primals[2:], f_dot=f_dot)
+  z_k, f_k, f_k_dot = _adaptive_aaa(
+    z_k_0, f, evolutions, cutoff, tol, mmax, radius, domain, f_k_0,
+    sampling, prev_z_n, aaa=aaa, f_dot=f_dot
+  )
+
+  if aaa is None:
+    aaa = vanilla_aaa
 
   z_k_dot = np.zeros_like(z_k)
 
-  return jax.jvp(aaa, (z_k, f_k), (z_k_dot, f_k_dot))
+  primal_out, tangent_out = jax.jvp(
+    lambda z_k, f_k: aaa(z_k, f_k, tol, mmax), (z_k, f_k), (z_k_dot, f_k_dot)
+  )
+
+  if return_samples:
+    primal_out = (*primal_out, z_k, f_k)
+    tangent_out = (*tangent_out, z_k_dot, f_k_dot)
+  return primal_out, tangent_out
