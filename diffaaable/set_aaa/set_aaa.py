@@ -1,7 +1,5 @@
 import numpy as np
-import scipy.sparse as sp
 import logging
-import scipy
 from  diffaaable.util import poles
 
 log = logging.getLogger(__name__)
@@ -17,16 +15,14 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
       f_k (complex): MxN array of the sampled vector (size N) at `z_k`
   """
 
+  z_k = np.asarray(z_k)
+  f_k = np.asarray(f_k)
   M = len(z_k)
   mmax = min(M-1, mmax)
   N = len(f_k[0])
 
   norm_f = np.max(np.abs(f_k), axis=0)[None, :] if normalize else 1
   f_k = f_k / norm_f
-
-  left_scaling = sp.spdiags(
-    f_k.T, np.arange(0, -M*N, -M), M*N, M
-  )
 
   r_k = np.mean(f_k)
   errs = []
@@ -35,8 +31,10 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
   index = np.empty((0,), dtype=int)
   w_j = np.empty((0,))
   f_j = np.empty((0,N))
-  C = np.empty((M,0))
-  Q = np.empty((M*N, 0))
+  C = np.zeros((M, mmax+1), dtype=complex)
+  # orthonormal basis, stored column-wise; grown on demand to avoid copying
+  # the (potentially huge) M*N x m matrix in every iteration
+  Q_buf = np.zeros((M*N, min(mmax+1, 8)), dtype=complex, order='F')
 
   S = np.zeros((mmax+1, mmax+1), dtype=complex)
   H = np.zeros((mmax+1, mmax+1), dtype=complex)
@@ -69,13 +67,18 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
 
     # Add column to the Cauchy matrix. Mxm
     with np.errstate(divide='ignore'):
-        addC = 1/(z_k[:]-z_j[-1])
-        C = np.c_[C, addC]
+        C[:, m] = 1/(z_k[:]-z_j[-1])
         C[index, m] = 0
+    Cm = C[:, :m+1]
+
+    if m >= Q_buf.shape[1]:
+      Q_new = np.zeros((M*N, min(mmax+1, 2*Q_buf.shape[1])), dtype=complex, order='F')
+      Q_new[:, :m] = Q_buf[:, :m]
+      Q_buf = Q_new
+    Q = Q_buf[:, :m]
 
     # "Compute the next vector of the basis."
-    v = C[:, -1:] @ f_j[-1:]
-    v = left_scaling @ C[:, -1:] - v.flatten("F")[:, None]
+    v = (C[:, m:m+1] * (f_k - f_j[-1:])).flatten("F")[:, None]
 
     q = Q[next_sample_flat, :m]
 
@@ -88,11 +91,13 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
     #Si = scipy.linalg.cholesky(ee, lower=False)
 
     H[:m, :m] = Si@H[:m, :m]
-    S[:m, :m] = scipy.linalg.solve(Si.T, S[:m, :m].T).T
+    # np.linalg (not scipy.linalg): alternating between the separate BLAS
+    # builds bundled with numpy and scipy causes heavy thread contention
+    S[:m, :m] = np.linalg.solve(Si.T, S[:m, :m].T).T
     S[m, m] = 1
     Q[index_flat, :] = 0
 
-    Qv = np.conj(Q.T) @ v
+    Qv = (v.conj().T @ Q).conj().T # = Q^H v without copying Q
 
     H[:m, m] = np.squeeze(Qv)
     H[:m, m] = np.conj(S[:m, :m].T) @ H[:m, m]
@@ -106,7 +111,7 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
     # Reorthoganlization is necessary for higher precision
     it = 0
     while it<reortho_iterations and H[m,m] < 1/np.sqrt(2)*nv:
-      h_new = np.conj(S[:m, :m].T)@(np.conj(Q.T)@v)
+      h_new = np.conj(S[:m, :m].T)@((v.conj().T @ Q).conj().T)
       v = v - Q@(S[:m, :m]@h_new)
       H[:m, m] = H[:m, m] + np.squeeze(h_new)
       nv = H[m,m]
@@ -119,15 +124,15 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
     v = v/H[m,m]
 
     # add v
-    Q = np.c_[Q, v]
+    Q_buf[:, m] = v[:, 0]
 
     # Solve small least squares problem with H
     u, s, vh = np.linalg.svd(H[:m+1, :m+1])
     w_j = np.conj(vh[-1])
 
     # Get the rational approximation
-    Nom = C@(w_j[:, None]*f_j)
-    Den = C@(w_j[:, None]*np.ones_like(f_j))
+    Nom = Cm@(w_j[:, None]*f_j)
+    Den = (Cm@w_j)[:, None]
     with np.errstate(invalid='ignore'):
       r_k = Nom/Den
     r_k[index] = f_j
