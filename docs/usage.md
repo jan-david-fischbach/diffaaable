@@ -25,7 +25,7 @@ import jax
 import jax.numpy as jnp
 
 ### sample points ###
-z_k_r = z_k_i = jnp.linspace(0, 3, 20)
+z_k_r = z_k_i = jnp.linspace(0, 2.8, 20) # avoid sampling exactly on a pole
 Z_k_r, Z_k_i = jnp.meshgrid(z_k_r, z_k_r)
 z_k = Z_k_r + 1j*Z_k_i
 
