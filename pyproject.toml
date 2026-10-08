@@ -54,7 +54,8 @@ docs = [
   "jupytext",
   "matplotlib",
   "jupyter-book<2",
-  "sphinx_math_dollar"
+  "sphinx_math_dollar",
+  "treams"
 ]
 
 [tool.black]

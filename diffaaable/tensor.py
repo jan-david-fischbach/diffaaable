@@ -1,7 +1,7 @@
 import jax
+import jax.numpy as jnp
 import numpy as np
 from diffaaable.set_aaa.set_aaa import _set_aaa
-from baryrat import BarycentricRational
 from diffaaable.util import poles, aaa_jvp_rule, validate_samples
 from diffaaable.errors import InputError
 from diffaaable.vectorial import residues_vec
@@ -99,18 +99,52 @@ def _entry_weights(z_k, F_k, tol_aaa, mmax_aaa, thres_numerical_zero, norm_power
 
 tensor_aaa.defjvp(aaa_jvp_rule(_tensor_aaa, _entry_weights))
 
-def tensor_baryrat(z_j, f_j, w_j): #TODO write down properly (eg.g. using jax.vmap)
-    shape = f_j[0].shape
-    rs = [BarycentricRational(z_j, f_j_i, w_j) for f_j_i in f_j.reshape((len(z_j), -1)).T]
+def tensor_baryrat(z_j, f_j, w_j):
+  r"""Evaluable barycentric rational with scalar, vector or tensor values.
 
-    def inner(z):
-      z = np.array(z)
-      results = [r(z) for r in rs]
-      res = np.stack(results, axis=-1)
-      out_shape = (*z.shape, *shape)
-      return res.reshape(out_shape)
+  Returns the function
 
-    return inner
+  .. math::
+     \mathbf{r}(z) = \frac{\sum_j w_j \mathbf{f}_j / (z - z_j)}
+                          {\sum_j w_j / (z - z_j)} ,
+
+  i.e. the approximation found by :func:`~diffaaable.tensor.tensor_aaa` (or
+  any other variant returning `z_j, f_j, w_j`). At the nodes `z_j` it
+  returns `f_j` exactly. The evaluation is implemented in JAX and is
+  differentiable w.r.t. `z` and the parameters.
+
+  Parameters
+  ----------
+  z_j : array (m,)
+      nodes of the barycentric rational
+  f_j : array (m, ...)
+      values at the nodes, scalar or of arbitrary trailing shape
+  w_j : array (m,)
+      weights of the barycentric rational
+
+  Returns
+  -------
+  r : callable
+      `r(z)` accepts a scalar or an array `z` and returns an array of shape
+      `(*z.shape, *f_j.shape[1:])`.
+  """
+  z_j, f_j, w_j = jnp.asarray(z_j), jnp.asarray(f_j), jnp.asarray(w_j)
+
+  def r(z):
+    z = jnp.asarray(z)
+    per_z = (*z.shape, *(1,)*(f_j.ndim-1))  # broadcasts against f_j[0]
+    diff = z[..., None] - z_j  # (*z.shape, m)
+    at_node = diff == 0
+    # avoid dividing by zero at the nodes (also keeps gradients finite)
+    C = w_j / jnp.where(at_node, 1, diff)
+    N = jnp.tensordot(C, f_j, axes=1)
+    D = jnp.sum(C, axis=-1).reshape(per_z)
+    # at a node the formula is 0/0, return the node value instead
+    hit = jnp.any(at_node, axis=-1).reshape(per_z)
+    f_node = jnp.tensordot(at_node.astype(f_j.dtype), f_j, axes=1)
+    return jnp.where(hit, f_node, N / D)
+
+  return r
 
 def residues(z_j,f_j,w_j,z_n):
   return residues_vec(

@@ -4,6 +4,7 @@ API Reference
 All functions are importable directly from ``diffaaable`` and return the
 nodes ``z_j``, values ``f_j``, weights ``w_j`` and poles ``z_n`` of the
 barycentric rational approximation.
+The approximation can be evaluated with :func:`~diffaaable.tensor.tensor_baryrat`.
 
 =========================================================  ==============================================================
 Function                                                   Use it for

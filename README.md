@@ -10,7 +10,7 @@ Additionally the following application specific extensions to the AAA algorithm 
 
 - **Adaptive**: Adaptive refinement strategy (called *Iterative Sample Refinement* (ISR) in the corresponding paper) to minimize the number of function evaluations needed to precisely locate poles within some domain
 - **Vectorial**: AAA algorithm acting on vector valued functions $\mathbf{f}(z)$ as presented in [^3].
-- **Tensor**: Like Vectorial, but accepts tensor-valued functions $\mathbf{F}(z)$ of arbitrary shape. Preferred over Vectorial.
+- **Tensor**: Like Vectorial, but accepts tensor-valued functions $\mathbf{F}(z)$ of arbitrary shape, e.g. to obtain a joint pole-expansion of a T-matrix [^5]. Preferred over Vectorial.
 - **Lorentz**: Variant that enforces symmetric poles around the imaginary axis.
 - **Selective Refinement**: Use a divide-and-conquer scheme to capture many poles simultaneously and accurately, by limiting the number of poles per AAA solve. Suggested in [^4].
 
@@ -32,6 +32,7 @@ add a one-line fragment to `.changelog.d/`, named `<PR number>.<type>.md`
 
 ## Citation
 When using this software package for scientific work please cite the associated publication [^2].
+When using the tensor-valued AAA (`tensor_aaa`), e.g. for pole-expansions of T-matrices, please also cite [^5].
 
 +++
 
@@ -39,3 +40,4 @@ When using this software package for scientific work please cite the associated 
 [^2]: "A framework to compute resonances arising from multiple scattering", https://doi.org/10.1002/adts.202400989
 [^3]: https://doi.org/10.1093/imanum/draa098
 [^4]: https://doi.org/10.48550/arXiv.2405.19582
+[^5]: "Pole-Expansion of the T-Matrix Based on a Matrix-Valued AAA-Algorithm", ACS Photonics 13, 5291 (2026), https://doi.org/10.1021/acsphotonics.6c00436
