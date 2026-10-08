@@ -1,8 +1,10 @@
+import warnings
 import numpy as np
 from diffaaable.core import aaa
 from diffaaable.util import residues
 from diffaaable.adaptive import Domain, domain_mask, adaptive_aaa
 import matplotlib.pyplot as plt
+from diffaaable.errors import ConvergenceWarning
 
 def reduced_domain(domain, reduction=1-1/12):
   """
@@ -196,47 +198,58 @@ def selective_subdivision_aaa(f: callable,
     cutoff = np.inf
 
   eval_count = 0
-  if use_adaptive:
-    if z_k is None:
-      z_k = np.empty((0,), dtype=complex)
-      f_k = z_k.copy()
+  # Not reaching the tolerance is expected for domains that are going to be
+  # subdivided -> only report it for the final fits
+  with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always", ConvergenceWarning)
+    if use_adaptive:
+      if z_k is None:
+        z_k = np.empty((0,), dtype=complex)
+        f_k = z_k.copy()
 
-    if len(z_k) < N:
-      z_k_new = sample_domain(domain, N)
-      f_k = np.append(f_k, np.asarray(f(z_k_new)))
-      z_k = np.append(z_k, z_k_new)
+      if len(z_k) < N:
+        z_k_new = sample_domain(domain, N)
+        f_k = np.append(f_k, np.asarray(f(z_k_new)))
+        z_k = np.append(z_k, z_k_new)
 
-      eval_count += len(z_k_new)
+        eval_count += len(z_k_new)
 
-    eval_count -= len(z_k)
+      eval_count -= len(z_k)
 
-    # NOTE: reduced domain with a factor larger than 1
-    # actually increases domain size to avoid missing poles right at the border
-    z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(
-      z_k, f, f_k_0=f_k, evolutions=evolutions_adaptive, tol=tol_aaa,
-      domain=reduced_domain(domain, 1.07), radius=domain_size*radius_adaptive,
-      return_samples=True, cutoff=cutoff
-    )
-    # TODO pass down samples in buffer zone
-    eval_count += len(z_k)
+      # NOTE: reduced domain with a factor larger than 1
+      # actually increases domain size to avoid missing poles right at the border
+      z_j, f_j, w_j, z_n, z_k, f_k = adaptive_aaa(
+        z_k, f, f_k_0=f_k, evolutions=evolutions_adaptive, tol=tol_aaa,
+        domain=reduced_domain(domain, 1.07), radius=domain_size*radius_adaptive,
+        return_samples=True, cutoff=cutoff
+      )
+      # TODO pass down samples in buffer zone
+      eval_count += len(z_k)
 
-  else:
-    if on_rim:
-      z_k = sample_rim(domain, N)
     else:
-      z_k = sample_domain(reduced_domain(domain, 1.05), N)
-    f_k = np.asarray(f(z_k))
-    eval_count += len(f_k)
-    try:
-      z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=tol_aaa)
-    except np.linalg.LinAlgError as e:
-      z_n = z_j = f_j = w_j = np.empty((0,))
+      if on_rim:
+        z_k = sample_rim(domain, N)
+      else:
+        z_k = sample_domain(reduced_domain(domain, 1.05), N)
+      f_k = np.asarray(f(z_k))
+      eval_count += len(f_k)
+      try:
+        z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol=tol_aaa)
+      except np.linalg.LinAlgError as e:
+        z_n = z_j = f_j = w_j = np.empty((0,))
+
+  for w in caught:
+    if not issubclass(w.category, ConvergenceWarning):
+      warnings.warn_explicit(w.message, w.category, w.filename, w.lineno)
 
   poles = z_n[domain_mask(domain, z_n)]
 
   if (Dmax == 0 or
     (len(poles)<=max_poles and all_poles_known(poles, suggestions, tol_pol))):
 
+    for w in caught:
+      if issubclass(w.category, ConvergenceWarning):
+        warnings.warn_explicit(w.message, w.category, w.filename, w.lineno)
     res = residues(z_j, f_j, w_j, poles)
     return poles, res, eval_count
 

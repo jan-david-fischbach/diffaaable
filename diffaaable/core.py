@@ -7,7 +7,8 @@ import numpy as np
 from baryrat import aaa as oaaa # ordinary aaa
 from .tensor import tensor_aaa
 import functools
-from .util import poles, barycentric_jvp
+from .util import poles, barycentric_jvp, validate_samples, check_z_dot
+from .errors import convergence_error, mmax_warning
 
 USE_SETAAA = False
 
@@ -17,12 +18,22 @@ def aaa(z_k: npt.NDArray, f_k: npt.NDArray, tol: float=1e-13, mmax: int=100):
   """
   Wraped aaa to enable JAX based autodiff.
   """
+  if callable(f_k):
+    f_k = f_k(z_k)
+  validate_samples(z_k, f_k)
+
   if USE_SETAAA:
     print("Using set_aaa")
     z_j, f_j, w_j, z_n = tensor_aaa(z_k, f_k[:, None], tol_aaa=tol, mmax_aaa=mmax)
     f_j = f_j[:, 0]
   else:
-    r = oaaa(z_k, f_k, tol=tol, mmax=mmax)
+    try:
+      r, errors = oaaa(z_k, f_k, tol=tol, mmax=mmax, return_errors=True)
+    except np.linalg.LinAlgError as e:
+      raise convergence_error(e) from e
+    norm = np.linalg.norm(np.ravel(f_k), np.inf)
+    if len(errors) == mmax and errors[-1] > tol * norm:
+      mmax_warning(mmax, errors[-1] / norm, tol)
     z_j = r.nodes
     f_j = r.values
     w_j = r.weights
@@ -124,6 +135,7 @@ def aaa_jvp(primals, tangents):
   """
   z_k, f_k = primals[:2]
   z_dot, f_dot = tangents[:2]
+  check_z_dot(z_dot)
 
   primal_out = aaa(*primals)
   # like baryrat, accept samples of any shape (e.g. on a meshgrid)

@@ -1,21 +1,20 @@
 import jax
 import numpy as np
-from diffaaable.util import poles, aaa_jvp_rule
+from diffaaable.util import poles, aaa_jvp_rule, validate_samples
+from diffaaable.errors import InputError, convergence_error, mmax_warning
 
 def check_inputs(z_k, f_k):
+  validate_samples(z_k, f_k, vector_valued=True)
   f_k = np.array(f_k)
   z_k = np.array(z_k)
-
-  if z_k.ndim != 1:
-    raise ValueError(f"z_k should be 1D but has shape {z_k.shape}")
   M = z_k.shape[0]
 
   if f_k.ndim == 1:
     f_k = f_k[:, np.newaxis]
 
-  if f_k.ndim != 2 or f_k.shape[0]!=M:
-    raise ValueError("f_k should be 1 or 2D and have the same first"
-                     f"dimension as z_k, {f_k.shape=}, {z_k.shape=}")
+  if f_k.ndim != 2:
+    raise InputError(f"f_k should be 1 or 2D, but has shape {f_k.shape}. "
+                     "For higher dimensional samples use `tensor_aaa`.")
   V = f_k.shape[1]
 
   return z_k, f_k, M, V
@@ -71,6 +70,8 @@ def _vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
   r_k = np.mean(f_k) * np.ones_like(f_k)
 
   mmax = min(mmax, len(f_k)//2)
+  if mmax < 1:
+    raise InputError(f"vectorial AAA requires at least 2 samples, got {M}")
 
   for m in range(mmax):
       # find largest residual
@@ -90,7 +91,10 @@ def _vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
       # compute weights as right singular vector for smallest singular value
       if return_errors:
          print("start SVD")
-      _, _, Vh = np.linalg.svd(A, full_matrices=False)
+      try:
+        _, _, Vh = np.linalg.svd(A, full_matrices=False)
+      except np.linalg.LinAlgError as e:
+        raise convergence_error(e, "vectorial AAA") from e
       if return_errors:
          print("finished SVD")
 
@@ -110,6 +114,9 @@ def _vectorial_aaa(z_k, f_k, tol=1e-13, mmax=100, return_errors=False):
          print(errors[-1])
       if errors[-1] <= reltol:
           break
+  else:
+    mmax_warning(mmax, errors[-1] / np.linalg.norm(f_k, np.inf), tol,
+                 "vectorial AAA")
 
   z_n = poles(z_j, w_j)
   if return_errors:

@@ -2,6 +2,84 @@ import scipy.linalg
 import numpy as np
 import jax
 import jax.numpy as jnp
+from diffaaable.errors import InputError
+
+def _describe(values, max_shown=5):
+  values = np.asarray(values)
+  shown = ", ".join(str(v) for v in values[:max_shown])
+  if len(values) > max_shown:
+    shown += f", ... ({len(values)} in total)"
+  return shown
+
+def validate_samples(z_k, f_k, vector_valued=False):
+  """
+  Check the samples passed to an AAA variant and raise an `InputError`
+  describing the problem if they are invalid.
+
+  Parameters
+  ----------
+    z_k : array (M,)
+      sample points. Without `vector_valued` any shape is accepted (and
+      flattened) as long as it matches `f_k`.
+    f_k : array (M, ...)
+      samples
+    vector_valued : bool
+      whether `f_k` holds (M, ...) vector/tensor valued samples
+
+  Raises
+  ------
+    InputError
+      if the shapes do not match, no samples are provided, any sample point
+      or sample is not finite, or a sample point occurs more than once.
+  """
+  z_shape, f_shape = np.shape(z_k), np.shape(f_k)
+  if vector_valued:
+    if len(z_shape) != 1:
+      raise InputError(f"z_k has to be 1D but has shape {z_shape}")
+    if len(f_shape) < 1 or f_shape[0] != z_shape[0]:
+      raise InputError(
+        "The first dimension of f_k has to match the number of sample points "
+        f"z_k, but f_k.shape={f_shape} and z_k.shape={z_shape}"
+      )
+  elif z_shape != f_shape:
+    raise InputError(
+      "z_k and f_k need to have the same shape (one sample per sample point), "
+      f"but z_k.shape={z_shape} and f_k.shape={f_shape}"
+    )
+
+  M = int(np.prod(z_shape[:1] if vector_valued else z_shape))
+  if M == 0:
+    raise InputError("No samples provided: z_k and f_k are empty")
+
+  # values of tracers are unknown (e.g. under jax.jit) -> skip value checks
+  if not isinstance(z_k, jax.core.Tracer):
+    z = np.ravel(z_k)
+    bad = np.flatnonzero(~np.isfinite(z))
+    if len(bad):
+      raise InputError(
+        f"{len(bad)} of {M} sample points z_k are not finite (nan or inf) "
+        f"at indices {_describe(bad)}"
+      )
+
+    unique, counts = np.unique(z, return_counts=True)
+    duplicates = unique[counts > 1]
+    if len(duplicates):
+      raise InputError(
+        f"{len(duplicates)} sample point(s) occur more than once in z_k: "
+        f"{_describe(duplicates)}. AAA requires distinct sample points; "
+        "remove the duplicates, e.g. using `np.unique(z_k, return_index=True)`."
+      )
+
+  if not isinstance(f_k, jax.core.Tracer):
+    f = np.reshape(np.asarray(f_k), (M, -1))
+    bad = np.flatnonzero(~np.all(np.isfinite(f), axis=1))
+    if len(bad):
+      raise InputError(
+        f"{len(bad)} of {M} samples f_k are not finite (nan or inf) at "
+        f"indices {_describe(bad)} (sample points z_k: "
+        f"{_describe(np.ravel(z_k)[bad])}). Discard these samples, e.g. "
+        "using the `cutoff` argument of `adaptive_aaa`."
+      )
 
 def poles(z_j,w_j):
   """
@@ -159,15 +237,21 @@ def poles_jvp(z_j, w_j, z_n, w_j_dot):
     jnp.sum(w_j.reshape(-1, 1)    /denom**2, axis=0)
   )
 
+def check_z_dot(z_dot):
+  """Raise if the sample points `z_k` carry a (non zero) tangent."""
+  if np.any(z_dot):
+    raise NotImplementedError(
+      "Differentiating with respect to the sample points z_k is not "
+      "supported. Only the samples f_k may depend on the parameters."
+    )
+
 def barycentric_jvp(z_k, f_k, z_dot, f_dot, z_j, f_j, w_j, z_n, entry_weights=None):
   """
   Tangents of the outputs `(z_j, f_j, w_j, z_n)` of an AAA fit to the samples
   `f_k` at `z_k`. Works for scalar (M,) as well as vector/tensor (M, ...)
   valued samples. See `weights_jvp`.
   """
-  # z_dot should be zero anyways
-  if np.any(z_dot):
-    raise NotImplementedError("Parametrizing the sampling positions z_k is not supported")
+  check_z_dot(z_dot)
 
   idx = node_indices(z_k, z_j)
   z_j_dot = z_dot[idx]
@@ -193,6 +277,7 @@ def aaa_jvp_rule(fun, entry_weights=None):
   def rule(primals, tangents):
     z_k, f_k = primals[:2]
     z_dot, f_dot = tangents[:2]
+    check_z_dot(z_dot)
 
     primal_out = fun(*primals)
     z_j, f_j, w_j, z_n = primal_out

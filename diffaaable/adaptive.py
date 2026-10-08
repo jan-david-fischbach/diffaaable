@@ -4,10 +4,12 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.typing as npt
 from diffaaable import aaa
+from diffaaable.util import check_z_dot
 import jax
 from jax import random
 import matplotlib.pyplot as plt
 from functools import partial
+from diffaaable.errors import InputError
 Domain = tuple[complex, complex]
 
 def top_right(a: npt.NDArray, b: npt.NDArray):
@@ -120,6 +122,56 @@ def next_samples_heat(
 
 vanilla_aaa = jax.tree_util.Partial(aaa)
 
+def check_domain(domain: Domain):
+  if domain is None:
+    return
+  if len(domain) != 2:
+    raise InputError(
+      "domain has to be a tuple (lower_left, upper_right) of two complex "
+      f"numbers, got {domain}"
+    )
+  lower_left, upper_right = (complex(d) for d in domain)
+  if (lower_left.real > upper_right.real or
+      lower_left.imag > upper_right.imag):
+    raise InputError(
+      "domain has to be given as (lower_left, upper_right), i.e. "
+      "domain[0] has to have smaller real and imaginary parts than "
+      f"domain[1], got {domain}. Otherwise all poles are discarded."
+    )
+
+_CLOSURE_MSG = (
+  "`f` depends on a value that is being differentiated/traced but is not "
+  "passed as an argument (e.g. via a closure). To differentiate through "
+  "`adaptive_aaa` provide `f` as `jax.tree_util.Partial(fun, *params)` where "
+  "`fun(*params, z)` evaluates the function."
+)
+
+def evaluate(f, z_k):
+  """Evaluate `f` at `z_k`, explaining common mistakes."""
+  try:
+    f_k = f(z_k)
+  except jax.errors.UnexpectedTracerError as e:
+    raise InputError(_CLOSURE_MSG) from e
+  check_evaluation(f_k, z_k)
+  return f_k
+
+def check_evaluation(f_k, z_k):
+  """Make sure `f` returned one sample per point and no tracer."""
+  if isinstance(f_k, jax.core.Tracer):
+    raise InputError(_CLOSURE_MSG)
+  if np.shape(f_k)[:1] != np.shape(z_k):
+    raise InputError(
+      "`f` has to return one sample per sample point (along the first "
+      f"axis), but returned shape {np.shape(f_k)} for {len(z_k)} points"
+    )
+
+def check_remaining(z_k, f_k, cutoff, n_before):
+  if len(z_k) == 0:
+    raise InputError(
+      f"All {n_before} samples were discarded since f was not finite or "
+      f"exceeded the cutoff={cutoff:g}. Check `f` or increase `cutoff`."
+    )
+
 def _take(a, idx):
     # tangents can be tracers (e.g. under jax.grad) -> index in JAX
     if isinstance(a, jax.core.Tracer):
@@ -186,14 +238,21 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     )
   else:
     if f_k_0 is None:
-      f_k = f(z_k)
+      f_k = evaluate(f, z_k)
     else:
       f_k = f_k_0
+    check_evaluation(f_k, z_k)
     f_k = np.asarray(f_k)
     f_k_dot = np.zeros_like(f_k)
 
+  if not np.any(np.isfinite(f_k)):
+    raise InputError(
+      f"`f` did not return any finite value for the {len(z_k)} initial "
+      "sample points z_k_0"
+    )
+
   if cutoff is None:
-    cutoff = 1e10*np.nanmedian(np.abs(f_k))
+    cutoff = 1e10*np.nanmedian(np.abs(np.where(np.isfinite(f_k), f_k, np.nan)))
 
   if domain is None:
     center = np.mean(z_k)
@@ -208,7 +267,9 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
 
   key = random.key(0)
   for i in range(evolutions):
+    n_before = len(z_k)
     z_k, f_k, f_k_dot = mask(z_k, f_k, f_k_dot, cutoff=cutoff)
+    check_remaining(z_k, f_k, cutoff, n_before)
     z_j, f_j, w_j, z_n = aaa(z_k, f_k, tol, mmax)
 
     if i==evolutions-1:
@@ -229,7 +290,7 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
         f_unpartial, (*args, add_z_k), (*args_dot, add_z_k_dot)
       )
     else:
-      f_k_new = f(add_z_k)
+      f_k_new = evaluate(f, add_z_k)
       f_k_dot_new = np.zeros_like(f_k_new)
 
     z_k = np.append(z_k, add_z_k)
@@ -244,9 +305,6 @@ def _adaptive_aaa(z_k_0: npt.NDArray,
     return z_j, f_j, w_j, z_n, z_k, f_k
   return z_j, f_j, w_j, z_n
 
-# sampling, return_samples and aaa are static: functions are no valid JAX
-# types and return_samples changes the output structure
-@partial(jax.custom_jvp, nondiff_argnums=(9, 11, 12))
 def adaptive_aaa(z_k_0: npt.NDArray,
                  f:callable,
                  evolutions: int = 2,
@@ -341,22 +399,38 @@ def adaptive_aaa(z_k_0: npt.NDArray,
   f_k_final: np.array
       `f(z_k_final)` Only returned if `return_samples` is True.
   """
+  if not callable(f):
+    raise InputError(f"`f` has to be callable, got {type(f).__name__}")
+  if not isinstance(f, jax.tree_util.Partial):
+    # plain functions are no valid JAX type
+    f = jax.tree_util.Partial(f)
+  check_domain(domain)
+  if evolutions < 1:
+    raise InputError(f"evolutions has to be at least 1, got {evolutions}")
+
+  return _adaptive_aaa_diff(
+    z_k_0, f, evolutions, cutoff, tol, mmax, radius, domain, f_k_0,
+    sampling, prev_z_n, return_samples, aaa
+  )
+
+# sampling, return_samples and aaa are static: functions are no valid JAX
+# types and return_samples changes the output structure
+@partial(jax.custom_jvp, nondiff_argnums=(9, 11, 12))
+def _adaptive_aaa_diff(z_k_0, f, evolutions, cutoff, tol, mmax, radius,
+                       domain, f_k_0, sampling, prev_z_n, return_samples, aaa):
   return _adaptive_aaa(
     z_k_0=z_k_0, f=f, evolutions=evolutions, cutoff=cutoff, tol=tol, mmax=mmax,
     radius=radius, domain=domain, f_k_0=f_k_0, sampling=sampling,
     prev_z_n=prev_z_n, return_samples=return_samples, aaa=aaa
   )
 
-@adaptive_aaa.defjvp
+@_adaptive_aaa_diff.defjvp
 def adaptive_aaa_jvp(sampling, return_samples, aaa, primals, tangents):
   (z_k_0, f, evolutions, cutoff, tol, mmax, radius, domain, f_k_0,
    prev_z_n) = primals
   z_dot, f_dot = tangents[:2]
 
-  if np.any(z_dot):
-    raise NotImplementedError(
-      "Parametrizing the sampling positions z_k is not supported"
-    )
+  check_z_dot(z_dot)
 
   z_k, f_k, f_k_dot = _adaptive_aaa(
     z_k_0, f, evolutions, cutoff, tol, mmax, radius, domain, f_k_0,

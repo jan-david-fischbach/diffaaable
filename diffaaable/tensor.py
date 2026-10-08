@@ -2,7 +2,8 @@ import jax
 import numpy as np
 from diffaaable.set_aaa.set_aaa import _set_aaa
 from baryrat import BarycentricRational
-from diffaaable.util import poles, aaa_jvp_rule
+from diffaaable.util import poles, aaa_jvp_rule, validate_samples
+from diffaaable.errors import InputError
 from diffaaable.vectorial import residues_vec
 
 @jax.custom_jvp
@@ -42,10 +43,17 @@ def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-1
   return _tensor_aaa(z_k, F_k, tol_aaa, mmax_aaa, thres_numerical_zero, norm_power)
 
 def _tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-13, norm_power=0):
+  validate_samples(z_k, F_k, vector_valued=True)
   total_vec = np.array([np.array(F_ki) for F_ki in F_k]).reshape(len(z_k), -1)
 
   norm = np.max(np.abs(total_vec), axis=0)
   numerical_zeros = norm < thres_numerical_zero
+  if np.all(numerical_zeros):
+    raise InputError(
+      "All entries of F_k are numerically zero (below "
+      f"thres_numerical_zero={thres_numerical_zero:g}), there is nothing "
+      "to approximate."
+    )
   norm = norm**norm_power
 
   total_no_zeros = total_vec[:, ~numerical_zeros]

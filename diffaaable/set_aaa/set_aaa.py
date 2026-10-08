@@ -1,7 +1,8 @@
 import jax
 import numpy as np
 import logging
-from diffaaable.util import poles, aaa_jvp_rule
+from diffaaable.util import poles, aaa_jvp_rule, validate_samples
+from diffaaable.errors import InputError, convergence_error, mmax_warning
 
 log = logging.getLogger(__name__)
 
@@ -29,10 +30,23 @@ def set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True)
   return _set_aaa(z_k, f_k, tol, mmax, reortho_iterations, normalize)
 
 def _set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True):
+  try:
+    return _set_aaa_iteration(
+      z_k, f_k, tol, mmax, reortho_iterations, normalize
+    )
+  except np.linalg.LinAlgError as e:
+    raise convergence_error(e, "set AAA") from e
 
+def _set_aaa_iteration(z_k, f_k, tol, mmax, reortho_iterations, normalize):
+  validate_samples(z_k, f_k, vector_valued=True)
   z_k = np.asarray(z_k)
   f_k = np.asarray(f_k)
+  if f_k.ndim != 2:
+    raise InputError(f"f_k should be 2D (M x N), but has shape {f_k.shape}. "
+                     "For other shapes use `tensor_aaa`.")
   M = len(z_k)
+  if M < 2:
+    raise InputError(f"set AAA requires at least 2 samples, got {M}")
   mmax = min(M-1, mmax)
   N = len(f_k[0])
 
@@ -151,9 +165,10 @@ def _set_aaa(z_k, f_k, tol=1e-13, mmax=100, reortho_iterations=3, normalize=True
     with np.errstate(invalid='ignore'):
       r_k = Nom/Den
     r_k[index] = f_j
-
-
-
+  else:
+    err = np.max(np.abs(f_k-r_k))
+    if err > tol:
+      mmax_warning(mmax, err, tol, "set AAA")
 
   f_j *= norm_f
   w_j = w_j[:m+1] # not sure this is needed
