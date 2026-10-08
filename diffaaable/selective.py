@@ -180,13 +180,9 @@ def selective_subdivision_aaa(f: callable,
     If True, the next domain division will be horizontal. Used internally to alternate between horizontal and vertical divisions during recursion.
   debug_plot_domains: bool
     If True, the algorithm will plot the domains that are being searched. This is useful for debugging and understanding the algorithm.
-
-
-  TODO
-  ----
-  - allow access to samples slightly outside of domain
-  - divide horizontal/vertical according to the distribution of poles
   """
+  # TODO: allow access to samples slightly outside of domain
+  # TODO: divide horizontal/vertical according to the distribution of poles
 
   domain_size = np.abs(domain[1]-domain[0])/2
 

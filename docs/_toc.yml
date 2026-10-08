@@ -14,7 +14,9 @@ parts:
           - file: api/core
           - file: api/adaptive
           - file: api/tensor
+          - file: api/set_aaa
           - file: api/selective
           - file: api/vectorial
           - file: api/lorentz
+          - file: api/utilities
       - file: changelog

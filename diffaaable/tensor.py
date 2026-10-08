@@ -9,8 +9,8 @@ from diffaaable.vectorial import residues_vec
 @jax.custom_jvp
 def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-13, norm_power=0):
   """
-  Convenience alternative to the vector valued AAA algorithm (`aaa.vectorial`) accepting
-  a tensor valued function `F_k` (so arbitrary dimensionality) instead of the single dimension that `aaa.vectorial` requires.
+  Convenience alternative to the vector valued AAA algorithm (`vectorial_aaa`) accepting
+  a tensor valued function `F_k` (so arbitrary dimensionality) instead of the single dimension that `vectorial_aaa` requires.
 
   This function will first flatten the tensor valued function `F_k` and then apply the AAA algorithm to the flattened data.
   The result will be reshaped to the original tensor shape.
@@ -18,8 +18,8 @@ def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-1
   The entries very close to zero for all `z_k` will be replaced by zero.
 
   .. attention::
-  Internally `tensor_aaa` uses a sped up version of the AAA algorithm. (see https://doi.org/10.1093/imanum/draa098)
-  This can lead to numerical issues when reorthogonalization is sloppy. Further investigation needed.
+     Internally `tensor_aaa` uses a sped up version of the AAA algorithm. (see https://doi.org/10.1093/imanum/draa098)
+     This can lead to numerical issues when reorthogonalization is sloppy. Further investigation needed.
 
   Parameters
   ----------
@@ -36,6 +36,17 @@ def tensor_aaa(z_k, F_k, tol_aaa=1e-9, mmax_aaa=100, thres_numerical_zero = 1e-1
       norm_power: int
         The different tensor entries are normalized by their maximum absolute value to the power of `norm_power`.
         By default `norm_power=0` the tensor entries are not normalized.
+
+  Returns
+  -------
+      z_j: complex
+        m nodes of the barycentric rational
+      f_j: complex
+        mx... values at the nodes, with the trailing shape of `F_k`
+      w_j: complex
+        m weights of the barycentric rational
+      z_n: complex
+        poles of the approximation
 
   The result is JAX differentiable with respect to `F_k` via a custom JVP
   analogous to `diffaaable.aaa`.

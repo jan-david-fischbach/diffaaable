@@ -1,5 +1,4 @@
 Lorentz
 ===================================
 
-.. automodule:: diffaaable.lorentz
-   :members:
+.. autofunction:: diffaaable.lorentz.lorentz_aaa

@@ -1,5 +1,4 @@
 Tensor AAA
 ===================================
 
-.. automodule:: diffaaable.tensor
-   :members:
+.. autofunction:: diffaaable.tensor.tensor_aaa

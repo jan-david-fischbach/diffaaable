@@ -3,23 +3,23 @@
 
 ![](docs/assets/diffaaable.png)
 
-`diffaaable` is a JAX differentiable version of the AAA algorithm. The derivatives are implemented as custom Jacobian Vector products in accordance to [^1].
+`diffaaable` is a JAX differentiable version of the AAA algorithm. The derivatives are implemented as custom Jacobian-vector products (JVPs) following [^1].
 A detailed derivation of the used matrix expressions is provided in the appendix of [^2].
 Under the hood `diffaaable` uses the AAA implementation of [`baryrat`](https://github.com/c-f-h/baryrat).
-Additionaly the following application specific extensions to the AAA algorithm are included:
+Additionally the following application specific extensions to the AAA algorithm are included:
 
-- **Adaptive**: Adaptive refinement strategy (called *Iterative Sample Refinement* (ISR) in the corresponding paper) to minimize the number of function evaluation needed to precisely locate poles within some domain
+- **Adaptive**: Adaptive refinement strategy (called *Iterative Sample Refinement* (ISR) in the corresponding paper) to minimize the number of function evaluations needed to precisely locate poles within some domain
 - **Vectorial**: AAA algorithm acting on vector valued functions $\mathbf{f}(z)$ as presented in [^3].
-- **Tensor**: Convenience alternative to the vector valued AAA algorithm (`vectorial`) accepting a tensor valued function F_k (so arbitrary dimensionality) instead of the single dimension that `vectorial` requires.
+- **Tensor**: Like Vectorial, but accepts tensor-valued functions $\mathbf{F}(z)$ of arbitrary shape. Preferred over Vectorial.
 - **Lorentz**: Variant that enforces symmetric poles around the imaginary axis.
-- **Selective Refinement**: Use a divide and conquer theme to capture many pole simultaneously and accurately, by limiting the number of poles per AAA solve. Suggested in [^4].
+- **Selective Refinement**: Use a divide-and-conquer scheme to capture many poles simultaneously and accurately, by limiting the number of poles per AAA solve. Suggested in [^4].
 
 ## Installation
 to install `diffaaable` run
 `pip install diffaaable`
 
 ## Usage
-Please refer to the [quickstart tutorial](./usage.md)
+Please refer to the [quickstart tutorial](docs/usage.md)
 
 ## Contributing
 Feel free to open issues and/or PRs.

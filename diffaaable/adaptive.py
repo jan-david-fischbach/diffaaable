@@ -347,6 +347,8 @@ def adaptive_aaa(z_k_0: npt.NDArray,
       Defaults to 1e10 times the median of `f(z_k_0)`
   tol: float
       Tolerance used in AAA (see `diffaaable.aaa`)
+  mmax: int
+      Maximum number of support points used in AAA (see `diffaaable.aaa`)
   radius: float
       Distance from the assumed poles for next samples
   domain: tuple[complex, complex]
@@ -358,23 +360,18 @@ def adaptive_aaa(z_k_0: npt.NDArray,
   sampling: callable
       strategy to determine the next sample points. The function should
       accept the following arguments:
-        - z_n: np.ndarray
-            estimated poles
-        - prev_z_n: np.ndarray
-            previous estimated poles
-        - samples: np.ndarray
-            current sample points
-        - domain: Domain
-            domian in wich to refine poles
-        - radius: float
-            distance from the assumed poles for next samples
-        - randkey: jax.random.PRNGKey
-            random key for sampling
+
+      - `z_n` (np.ndarray): estimated poles
+      - `prev_z_n` (np.ndarray): previous estimated poles
+      - `samples` (np.ndarray): current sample points
+      - `domain` (Domain): domain in which to refine poles
+      - `radius` (float): distance from the assumed poles for next samples
+      - `randkey` (jax.random.PRNGKey): random key for sampling
   prev_z_n: np.ndarray
       the previous poles that will be passed to the first evaluation of the sampling strategy
   return_samples: bool
       If True, the function returns the samples used for the AAA approximation
-      and the function evaluations at these points at the 4t and 5th position.
+      and the function evaluations at these points at the 4th and 5th position.
   aaa: callable
       The AAA variant to be used, called as `aaa(z_k, f_k, tol, mmax)`.
       By default `diffaaable.aaa` is used. For vector/tensor valued `f`

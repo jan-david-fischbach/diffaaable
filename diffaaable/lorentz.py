@@ -3,6 +3,7 @@ config.update("jax_enable_x64", True) #important -> else aaa fails
 import jax.numpy as np
 import jax
 from diffaaable.vectorial import check_inputs
+from diffaaable.util import poles
 import jaxopt
 
 def optimal_weights(A, A_hat, stepsize=0.5):
@@ -23,7 +24,45 @@ def optimal_weights(A, A_hat, stepsize=0.5):
   return w_j
 
 def lorentz_aaa(z_k, f_k, tol=1e-9, mmax=100, return_errors=False):
-  """
+  r"""AAA variant whose rational approximation obeys the symmetry
+  $r(-\overline{z}) = \overline{r(z)}$, so its poles come in pairs
+  $p$, $-\overline{p}$ mirrored about the imaginary axis.
+
+  Each support point $z_j$ is complemented by its mirror image
+  $-\overline{z_j}$ with value $\overline{f_j}$ and weight $\overline{w_j}$.
+  The weights are found by an L-BFGS optimization (``jaxopt``) instead
+  of an SVD.
+
+  .. note::
+     With $2m$ support points the approximation has $2m-1$ poles, an odd
+     number. The symmetry therefore forces at least one pole onto the
+     imaginary axis, which may be spurious and should be filtered.
+
+  Parameters
+  ----------
+  z_k : array (M,)
+      sample points
+  f_k : array (M,) or (M, V)
+      function values at `z_k`, scalar or vector valued
+  tol : float
+      relative tolerance (w.r.t. the maximum of `|f_k|`)
+  mmax : int
+      maximum number of (non-mirrored) support points
+  return_errors : bool
+      if True, additionally return the maximum error of each iteration
+
+  Returns
+  -------
+  z_j : array (2m,)
+      support points, the second half being the mirrored `-conj(z_j)`
+  f_j : array (2m,) or (2m, V)
+      values at the support points
+  w_j : array (2m,)
+      weights
+  z_n : array (2m-1,)
+      poles of the approximation
+  errors : list of float
+      only if `return_errors` is True
   """
   z_k, f_k, M, V = check_inputs(z_k, f_k)
   z_k, f_k = np.asarray(z_k), np.asarray(f_k)
@@ -84,6 +123,7 @@ def lorentz_aaa(z_k, f_k, tol=1e-9, mmax=100, return_errors=False):
   f_j = np.concatenate([f_j, np.conj(f_j)])
   w_j = np.concatenate([w_j, np.conj(w_j)])
 
+  z_n = poles(z_j, w_j)
   if return_errors:
-    return z_j, f_j, w_j, errors
-  return z_j, f_j, w_j
+    return z_j, f_j, w_j, z_n, errors
+  return z_j, f_j, w_j, z_n

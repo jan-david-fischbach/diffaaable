@@ -1,6 +1,5 @@
 Vectorial AAA
 ===================================
-Note: This module is considered deprecated. Use :mod:`diffaaable.tensor` instead.
+Note: This module is considered deprecated. Use :func:`~diffaaable.tensor.tensor_aaa` instead.
 
-.. automodule:: diffaaable.vectorial
-   :members:
+.. autofunction:: diffaaable.vectorial.vectorial_aaa
