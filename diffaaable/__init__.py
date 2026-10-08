@@ -1,6 +1,6 @@
 """diffaaable - JAX-differentiable AAA algorithm"""
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 
 from diffaaable.core import aaa

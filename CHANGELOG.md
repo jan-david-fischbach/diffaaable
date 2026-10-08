@@ -2,6 +2,25 @@
 
 <!-- towncrier release notes start -->
 
+## [1.5.0](https://github.com/jan-david-fischbach/diffaaable/releases/tag/v1.5.0) - 2026-10-08
+
+
+### Added
+
+- Descriptive errors: all AAA variants validate their samples and raise an `InputError` (a `ValueError`) for duplicate or non-finite sample points, non-finite samples, mismatched shapes and empty inputs. Failing linear algebra raises a `ConvergenceError` (a `LinAlgError`) explaining likely causes, and a `ConvergenceWarning` is emitted when `tol` is not reached within `mmax` iterations. `adaptive_aaa` explains invalid domains, samples discarded by `cutoff` and functions closing over differentiated values.
+- Documentation example reproducing the T-matrix pole-expansion of a chiral core-shell sphere, and a reference to the associated ACS Photonics paper.
+- `tensor_baryrat` is now part of the public API: a JAX-differentiable evaluator for barycentric rationals with scalar, vector or tensor values (previously a loop over `baryrat` instances).
+
+
+### Changed
+
+- `lorentz_aaa` now returns the poles like the other variants: `z_j, f_j, w_j, z_n` (plus `errors` with `return_errors=True`).
+
+
+### Fixed
+
+- `aaa` no longer silently accepts `f_k` with a different length than `z_k`.
+
 ## [1.4.0](https://github.com/jan-david-fischbach/diffaaable/releases/tag/v1.4.0) - 2026-10-02
 
 
